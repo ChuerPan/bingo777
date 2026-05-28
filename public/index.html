@@ -65,11 +65,6 @@
       border: 2px solid #ffd700;
     }
 
-    .reel-content {
-      position: absolute;
-      width: 100%;
-    }
-
     .symbol {
       width: 80px;
       height: 80px;
@@ -477,7 +472,7 @@
       <ul style="margin-left: 20px; line-height: 1.8; color: #ccc;">
         <li>选择投注金额后点击 SPIN 按钮开始转动</li>
         <li>6个转盘会依次滚动停止，形成4排×6列的图案矩阵</li>
-        <li>每排从左往右计算：每个图案获得基础奖励，连续相同图案奖励翻倍</li>
+        <li>每排从左往右计算：连续3个及以上相同图案才有奖励，数量越多奖励越高</li>
         <li>👑 皇冠特效：每出现1个皇冠，全场奖励翻倍</li>
         <li>中奖后，图案会逐个高亮显示并显示奖励数额</li>
       </ul>
@@ -525,17 +520,16 @@
   </div>
 
   <script>
+    // 重新配置图案奖励 - 更符合RTP要求
     const SYMBOL_CONFIG = {
-      '💰': { name: '金币', baseReward: 5, weight: 20 },
-      '💎': { name: '钻石', baseReward: 15, weight: 10 },
-      '👑': { name: '皇冠', baseReward: 30, weight: 3, isSpecial: true },
-      '⭐': { name: '星星', baseReward: 10, weight: 14 },
-      '❤️': { name: '爱心', baseReward: 8, weight: 16 },
-      '🍀': { name: '幸运草', baseReward: 12, weight: 12 },
-      '🍒': { name: '樱桃', baseReward: 4, weight: 22 },
-      '🔔': { name: '铃铛', baseReward: 6, weight: 20 },
-      '🟠': { name: '橙子', baseReward: 3, weight: 24 },
-      '🔶': { name: '条纹', baseReward: 2, weight: 26 }
+      '💰': { name: '金币', baseReward: 0.1, weight: 25, consecutive3: 0.5, consecutive4: 1.5, consecutive5: 5, consecutive6: 20 },
+      '💎': { name: '钻石', baseReward: 0.2, weight: 15, consecutive3: 0.8, consecutive4: 2.5, consecutive5: 8, consecutive6: 35 },
+      '👑': { name: '皇冠', baseReward: 0.5, weight: 3, isSpecial: true, consecutive3: 2, consecutive4: 5, consecutive5: 15, consecutive6: 50 },
+      '⭐': { name: '星星', baseReward: 0.15, weight: 20, consecutive3: 0.6, consecutive4: 2, consecutive5: 6, consecutive6: 25 },
+      '❤️': { name: '爱心', baseReward: 0.12, weight: 22, consecutive3: 0.55, consecutive4: 1.8, consecutive5: 5.5, consecutive6: 22 },
+      '🔔': { name: '铃铛', baseReward: 0.08, weight: 28, consecutive3: 0.4, consecutive4: 1.2, consecutive5: 4, consecutive6: 18 },
+      '🟠': { name: '橙子', baseReward: 0.05, weight: 32, consecutive3: 0.3, consecutive4: 1, consecutive5: 3, consecutive6: 15 },
+      '🔶': { name: '条纹', baseReward: 0.03, weight: 35, consecutive3: 0.25, consecutive4: 0.8, consecutive5: 2.5, consecutive6: 12 }
     };
 
     const SYMBOLS = Object.keys(SYMBOL_CONFIG);
@@ -561,7 +555,10 @@
           <div class="symbol-item${isCrown ? ' crown' : ''}">
             <div class="symbol-icon">${symbol}</div>
             <div class="symbol-name">${cfg.name}${isCrown ? ' (特效)' : ''}</div>
-            <div class="symbol-base-reward">${cfg.baseReward}x</div>
+            <div style="font-size: 0.8rem; color: #aaa;">
+              连3: ${cfg.consecutive3}x | 连4: ${cfg.consecutive4}x<br>
+              连5: ${cfg.consecutive5}x | 连6: ${cfg.consecutive6}x
+            </div>
           </div>
         `;
       }).join('');
@@ -584,19 +581,22 @@
     function getRandomSymbol() {
       let totalWeight = Object.values(SYMBOL_CONFIG).reduce((sum, cfg) => sum + cfg.weight, 0);
       
+      // 根据波动率调整权重
       if (config.volatility > 7) {
+        // 高波动：稀有高奖励图案更容易出现
         totalWeight = Object.values(SYMBOL_CONFIG).reduce((sum, cfg) => {
-          if (cfg.isSpecial || cfg.baseReward >= 10) {
-            return sum + cfg.weight * 1.5;
+          if (cfg.isSpecial || cfg.consecutive6 >= 30) {
+            return sum + cfg.weight * 2;
           }
-          return sum + cfg.weight * 0.8;
+          return sum + cfg.weight * 0.7;
         }, 0);
       } else if (config.volatility < 3) {
+        // 低波动：普通图案更容易出现
         totalWeight = Object.values(SYMBOL_CONFIG).reduce((sum, cfg) => {
-          if (cfg.isSpecial || cfg.baseReward >= 10) {
-            return sum + cfg.weight * 0.5;
+          if (cfg.isSpecial || cfg.consecutive6 >= 30) {
+            return sum + cfg.weight * 0.4;
           }
-          return sum + cfg.weight * 1.2;
+          return sum + cfg.weight * 1.3;
         }, 0);
       }
 
@@ -606,16 +606,16 @@
         let weight = cfg.weight;
         
         if (config.volatility > 7) {
-          if (cfg.isSpecial || cfg.baseReward >= 10) {
-            weight *= 1.5;
+          if (cfg.isSpecial || cfg.consecutive6 >= 30) {
+            weight *= 2;
           } else {
-            weight *= 0.8;
+            weight *= 0.7;
           }
         } else if (config.volatility < 3) {
-          if (cfg.isSpecial || cfg.baseReward >= 10) {
-            weight *= 0.5;
+          if (cfg.isSpecial || cfg.consecutive6 >= 30) {
+            weight *= 0.4;
           } else {
-            weight *= 1.2;
+            weight *= 1.3;
           }
         }
         
@@ -634,6 +634,9 @@
       document.getElementById('betPlus').disabled = true;
       balance -= currentBet;
       updateBalance();
+      
+      // 清除之前的高亮
+      document.querySelectorAll('.symbol.highlight').forEach(el => el.classList.remove('highlight'));
       
       const resultMatrix = [];
       let delay = 0;
@@ -696,49 +699,69 @@
     function checkWin(matrix) {
       let totalWin = 0;
       let winDetails = [];
-      const highlightedCells = [];
+      const winningGroups = [];
       let crownCount = 0;
 
+      // 统计皇冠数量
       for (let row = 0; row < VISIBLE_ROWS; row++) {
-        let rowWin = 0;
-        let prevSymbol = null;
-        let consecutiveCount = 0;
-        
         for (let col = 0; col < 6; col++) {
-          const symbol = matrix[col][row];
-          
-          if (symbol === '👑') {
+          if (matrix[col][row] === '👑') {
             crownCount++;
           }
-          
-          if (symbol === prevSymbol && prevSymbol !== null) {
-            consecutiveCount++;
-          } else {
-            consecutiveCount = 1;
-          }
-          
-          const baseReward = SYMBOL_CONFIG[symbol].baseReward;
-          const multiplier = Math.pow(2, consecutiveCount - 1);
-          const cellWin = baseReward * multiplier * currentBet;
-          rowWin += cellWin;
-          
-          if (cellWin > 0) {
-            highlightedCells.push({ row, col, win: cellWin, symbol, multiplier });
-          }
-          
-          prevSymbol = symbol;
         }
-        
-        if (rowWin > 0) {
-          winDetails.push(`第${row + 1}排: ${rowWin}`);
-        }
-        totalWin += rowWin;
       }
 
+      // 按排计算连续相同图案
+      for (let row = 0; row < VISIBLE_ROWS; row++) {
+        let col = 0;
+        while (col < 6) {
+          const symbol = matrix[col][row];
+          let consecutiveCount = 1;
+          
+          // 统计连续相同的数量
+          while (col + consecutiveCount < 6 && matrix[col + consecutiveCount][row] === symbol) {
+            consecutiveCount++;
+          }
+          
+          // 只有连续3个及以上才有奖励
+          if (consecutiveCount >= 3) {
+            const cfg = SYMBOL_CONFIG[symbol];
+            let multiplier = 0;
+            
+            if (consecutiveCount >= 6) multiplier = cfg.consecutive6;
+            else if (consecutiveCount >= 5) multiplier = cfg.consecutive5;
+            else if (consecutiveCount >= 4) multiplier = cfg.consecutive4;
+            else if (consecutiveCount >= 3) multiplier = cfg.consecutive3;
+            
+            const winAmount = multiplier * currentBet;
+            
+            // 记录获胜组
+            const groupCells = [];
+            for (let i = 0; i < consecutiveCount; i++) {
+              groupCells.push({ row, col: col + i });
+            }
+            
+            winningGroups.push({
+              symbol,
+              consecutiveCount,
+              multiplier,
+              winAmount,
+              cells: groupCells
+            });
+            
+            winDetails.push(`第${row + 1}排 ${symbol}×${consecutiveCount}: ${winAmount}`);
+            totalWin += winAmount;
+          }
+          
+          col += consecutiveCount;
+        }
+      }
+
+      // 皇冠加成
       const crownMultiplier = Math.pow(2, crownCount);
       if (crownCount > 0) {
         totalWin *= crownMultiplier;
-        winDetails.push(`皇冠加成: ×${crownMultiplier} (${crownCount}个皇冠)`);
+        winDetails.push(`皇冠加成: ×${crownMultiplier} (${crownCount}个)`);
       }
 
       if (totalWin > 0) {
@@ -746,7 +769,7 @@
         document.getElementById('resultText').textContent = `🎉 恭喜中奖! ${winDetails.join(' | ')}`;
         document.getElementById('resultAmount').textContent = `+${totalWin}`;
         document.getElementById('resultAmount').className = 'result-amount win';
-        highlightWinningCells(highlightedCells, crownMultiplier);
+        highlightWinningGroups(winningGroups, crownCount, crownMultiplier, totalWin);
       } else {
         document.getElementById('resultText').textContent = '😔 未中奖，再接再厉!';
         document.getElementById('resultAmount').textContent = `-${currentBet}`;
@@ -760,34 +783,87 @@
       updateBalance();
     }
 
-    function highlightWinningCells(cells, crownMultiplier) {
+    function highlightWinningGroups(groups, crownCount, crownMultiplier, totalWin) {
+      let currentRow = -1;
+      let allCells = [];
+      
+      // 按行整理所有单元格
+      for (const group of groups) {
+        for (const cell of group.cells) {
+          allCells.push({
+            ...cell,
+            symbol: group.symbol,
+            multiplier: group.multiplier,
+            winAmount: group.winAmount,
+            groupIndex: groups.indexOf(group),
+            isFirstInGroup: cell.col === group.cells[0].col,
+            consecutiveCount: group.consecutiveCount
+          });
+        }
+      }
+      
+      // 按行和列排序
+      allCells.sort((a, b) => {
+        if (a.row !== b.row) return a.row - b.row;
+        return a.col - b.col;
+      });
+      
       let cellIndex = 0;
       
       function highlightNext() {
-        if (cellIndex < cells.length) {
-          const cell = cells[cellIndex];
-          const reel = document.getElementById(`reel${cell.col}`);
-          const symbols = reel.querySelectorAll('.symbol');
-          const targetSymbol = symbols[symbols.length - VISIBLE_ROWS + cell.row];
-          targetSymbol.classList.add('highlight');
+        if (cellIndex < allCells.length) {
+          const cell = allCells[cellIndex];
           
-          const reelRect = reel.getBoundingClientRect();
-          const containerRect = document.getElementById('reelsContainer').getBoundingClientRect();
-          const x = reelRect.left - containerRect.left + reelRect.width / 2;
-          const y = reelRect.top - containerRect.top + (cell.row + 1) * 80;
+          // 换行时增加延时
+          const isNewRow = cell.row !== currentRow;
+          const delay = isNewRow && cellIndex > 0 ? 600 : 250;
+          currentRow = cell.row;
           
-          showFloatingText(`+${cell.win}`, x, y);
-          
-          cellIndex++;
-          setTimeout(highlightNext, 200);
+          setTimeout(() => {
+            const reel = document.getElementById(`reel${cell.col}`);
+            const symbols = reel.querySelectorAll('.symbol');
+            const targetSymbol = symbols[symbols.length - VISIBLE_ROWS + cell.row];
+            targetSymbol.classList.add('highlight');
+            
+            const reelRect = reel.getBoundingClientRect();
+            const containerRect = document.getElementById('reelsContainer').getBoundingClientRect();
+            const x = reelRect.left - containerRect.left + reelRect.width / 2;
+            const y = reelRect.top - containerRect.top + cell.row * 80;
+            
+            // 显示浮动文字
+            let floatText = '';
+            if (cell.isFirstInGroup) {
+              floatText = `×${cell.consecutiveCount}`;
+            } else if (cell.col === allCells[cellIndex].col) {
+              // 只在最后一个显示金额
+              const isLastInGroup = cellIndex === allCells.length - 1 || 
+                                   allCells[cellIndex + 1].groupIndex !== cell.groupIndex;
+              if (isLastInGroup) {
+                floatText = `+${cell.winAmount}`;
+              }
+            }
+            
+            if (floatText) {
+              showFloatingText(floatText, x, y);
+            }
+            
+            // 一段时间后恢复非高亮状态
+            setTimeout(() => {
+              targetSymbol.classList.remove('highlight');
+            }, 1500);
+            
+            cellIndex++;
+            highlightNext();
+          }, delay);
         } else {
+          // 显示皇冠加成
           if (crownMultiplier > 1) {
             setTimeout(() => {
               const container = document.getElementById('reelsContainer');
               const x = container.offsetWidth / 2;
               const y = container.offsetHeight / 2;
               showFloatingText(`皇冠 ×${crownMultiplier}`, x, y);
-            }, 300);
+            }, 400);
           }
           
           setTimeout(() => {
@@ -795,7 +871,7 @@
             document.getElementById('spinBtn').disabled = false;
             document.getElementById('betMinus').disabled = false;
             document.getElementById('betPlus').disabled = false;
-          }, 1500);
+          }, 5000);
         }
       }
       
@@ -814,7 +890,7 @@
       
       setTimeout(() => {
         floatText.remove();
-      }, 1000);
+      }, 1500);
     }
 
     function updateBalance() {
