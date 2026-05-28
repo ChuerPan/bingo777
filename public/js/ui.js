@@ -1,0 +1,208 @@
+// UI 和动画显示模块
+import { SYMBOL_CONFIG, GAME_CONSTANTS, SYMBOLS } from './config.js';
+import { gameState } from './gameState.js';
+
+// 初始化符号奖励显示区域
+export function initSymbolRewards() {
+  const container = document.getElementById('symbolRewards');
+  container.innerHTML = SYMBOLS.map(symbol => {
+    const cfg = SYMBOL_CONFIG[symbol];
+    const isCrown = symbol === '👑';
+    const isJoker = symbol === '🃏';
+    return `
+      <div class="symbol-item${isCrown ? ' crown' : ''}${isJoker ? ' joker' : ''}">
+        <div class="symbol-icon">${symbol}</div>
+        <div class="symbol-name">${cfg.name}${isJoker ? ' (万能)' : ''}${isCrown ? ' (特效)' : ''}</div>
+        <div style="font-size: 0.8rem; color: #aaa;">
+          连3: ${cfg.consecutive3}x | 连4: ${cfg.consecutive4}x<br>
+          连5: ${cfg.consecutive5}x | 连6: ${cfg.consecutive6}x
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// 更新余额显示
+export function updateBalanceDisplay() {
+  document.getElementById('balance').textContent = gameState.balance;
+  document.getElementById('currentBet').textContent = gameState.currentBet;
+  document.getElementById('betDisplay').textContent = gameState.currentBet;
+}
+
+// 显示结果
+export function showResult(totalWin, winDetails) {
+  const resultText = document.getElementById('resultText');
+  const resultAmount = document.getElementById('resultAmount');
+  
+  if (totalWin > 0) {
+    resultText.textContent = `🎉 恭喜中奖! ${winDetails.join(' | ')}`;
+    resultAmount.textContent = `+${totalWin}`;
+    resultAmount.className = 'result-amount win';
+  } else {
+    resultText.textContent = '😔 未中奖，再接再厉!';
+    resultAmount.textContent = `-${gameState.currentBet}`;
+    resultAmount.className = 'result-amount lose';
+  }
+}
+
+// 显示浮动文本（奖励提示）
+export function showFloatingText(text, x, y, extraClass = '') {
+  const container = document.getElementById('reelsContainer');
+  const floatText = document.createElement('div');
+  floatText.className = 'floating-text ' + extraClass;
+  floatText.textContent = text;
+  floatText.style.left = `${x}px`;
+  floatText.style.top = `${y}px`;
+  container.appendChild(floatText);
+  
+  setTimeout(() => {
+    floatText.remove();
+  }, 1500);
+}
+
+// 高亮中奖符号并显示奖励
+export function highlightWinningSymbols(winningGroups, allCrownCells, crownCount, crownMultiplier) {
+  let currentRow = -1;
+  let allCells = [];
+  
+  // 按行整理所有单元格
+  for (const group of winningGroups) {
+    const groupCells = group.cells;
+    let consecutiveMultiplier = 1;
+    
+    for (let i = 0; i < groupCells.length; i++) {
+      const cell = groupCells[i];
+      const positionInGroup = i;
+      
+      // 连续的话倍数递增
+      if (positionInGroup > 0) {
+        consecutiveMultiplier *= 2;
+      }
+      
+      // 计算这个图案的奖励
+      const baseReward = SYMBOL_CONFIG[group.symbol].consecutive3 / 3; // 基础份额
+      const cellWin = Math.round(baseReward * consecutiveMultiplier * gameState.currentBet);
+      
+      allCells.push({
+        ...cell,
+        symbol: group.symbol,
+        cellWin: cellWin,
+        groupIndex: winningGroups.indexOf(group),
+        isFirstInGroup: cell.col === groupCells[0].col,
+        isLastInGroup: cell.col === groupCells[groupCells.length - 1].col,
+        consecutiveCount: group.consecutiveCount,
+        groupJokerCount: group.groupJokerCount,
+        positionInGroup: positionInGroup
+      });
+    }
+  }
+  
+  // 按行和列排序
+  allCells.sort((a, b) => {
+    if (a.row !== b.row) return a.row - b.row;
+    return a.col - b.col;
+  });
+  
+  let cellIndex = 0;
+  
+  return new Promise((resolve) => {
+    function highlightNext() {
+      if (cellIndex < allCells.length) {
+        const cell = allCells[cellIndex];
+        
+        // 换行时增加延时
+        const isNewRow = cell.row !== currentRow;
+        const delay = isNewRow && cellIndex > 0 ? 600 : 250;
+        currentRow = cell.row;
+        
+        setTimeout(() => {
+          const reel = document.getElementById(`reel${cell.col}`);
+          const symbols = reel.querySelectorAll('.symbol');
+          const targetSymbol = symbols[symbols.length - GAME_CONSTANTS.VISIBLE_ROWS + cell.row];
+          targetSymbol.classList.add('highlight');
+          
+          const reelRect = reel.getBoundingClientRect();
+          const containerRect = document.getElementById('reelsContainer').getBoundingClientRect();
+          const x = reelRect.left - containerRect.left + reelRect.width / 2;
+          const y = reelRect.top - containerRect.top + cell.row * 80;
+          
+          // 显示该图案贡献的奖励
+          let floatText = `+${cell.cellWin}`;
+          let floatClass = '';
+          
+          showFloatingText(floatText, x, y, floatClass);
+          
+          // 一段时间后恢复非高亮状态
+          setTimeout(() => {
+            targetSymbol.classList.remove('highlight');
+          }, 1500);
+          
+          cellIndex++;
+          highlightNext();
+        }, delay);
+      } else {
+        // 高亮所有皇冠
+        let crownIndex = 0;
+        function highlightNextCrown() {
+          if (crownIndex < allCrownCells.length) {
+            const cell = allCrownCells[crownIndex];
+            setTimeout(() => {
+              const reel = document.getElementById(`reel${cell.col}`);
+              const symbols = reel.querySelectorAll('.symbol');
+              const targetSymbol = symbols[symbols.length - GAME_CONSTANTS.VISIBLE_ROWS + cell.row];
+              targetSymbol.classList.add('highlight');
+              
+              const reelRect = reel.getBoundingClientRect();
+              const containerRect = document.getElementById('reelsContainer').getBoundingClientRect();
+              const x = reelRect.left - containerRect.left + reelRect.width / 2;
+              const y = reelRect.top - containerRect.top + cell.row * 80;
+              
+              showFloatingText('👑', x, y, 'crown');
+              
+              setTimeout(() => {
+                targetSymbol.classList.remove('highlight');
+              }, 1500);
+              
+              crownIndex++;
+              highlightNextCrown();
+            }, 200);
+          } else if (crownMultiplier > 1) {
+            // 显示皇冠加成
+            setTimeout(() => {
+              const container = document.getElementById('reelsContainer');
+              const x = container.offsetWidth / 2;
+              const y = container.offsetHeight / 2;
+              showFloatingText(`皇冠 ×${crownMultiplier}`, x, y, 'crown');
+            }, 300);
+            
+            setTimeout(resolve, 4000);
+          } else {
+            setTimeout(resolve, 3000);
+          }
+        }
+        
+        highlightNextCrown();
+      }
+    }
+    
+    highlightNext();
+  });
+}
+
+// 禁用/启用控制按钮
+export function toggleControls(enabled) {
+  document.getElementById('spinBtn').disabled = !enabled;
+  document.getElementById('betMinus').disabled = !enabled;
+  document.getElementById('betPlus').disabled = !enabled;
+}
+
+// 应用配置并显示提示
+export function showConfigApplied(config) {
+  document.getElementById('summaryRtp').textContent = `${config.rtp}%`;
+  document.getElementById('summaryVol').textContent = config.volatility;
+  document.getElementById('summaryHouseEdge').textContent = `${config.houseEdge}%`;
+  
+  const summary = document.getElementById('configSummary');
+  summary.classList.add('show');
+  setTimeout(() => summary.classList.remove('show'), 3000);
+}
