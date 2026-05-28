@@ -11,6 +11,13 @@ import {
   toggleControls, 
   showConfigApplied 
 } from './ui.js';
+import { 
+  strategyState, 
+  initStrategyState, 
+  updateStrategyState, 
+  applyStrategyToWin, 
+  getStrategyAdjustments 
+} from './smartStrategy.js';
 
 // 游戏主流程 - 开始游戏
 export async function spinReels() {
@@ -47,29 +54,73 @@ export async function spinReels() {
     }
   });
   
-  // 分析奖励
-  const winResult = analyzeWinningMatrix(resultMatrix);
+  // 分析原始奖励
+  const originalWinResult = analyzeWinningMatrix(resultMatrix);
   
-  // 应用奖励
-  applyWin(winResult.totalWin);
+  // 应用智能策略
+  const strategyResult = applyStrategyToWin(
+    originalWinResult.totalWin, 
+    originalWinResult.winningGroups,
+    resultMatrix
+  );
+  
+  // 应用最终奖励
+  const finalWin = strategyResult.finalWin;
+  applyWin(finalWin);
+  
+  // 更新策略状态
+  updateStrategyState(gameState.currentBet, finalWin, gameState.balance);
+  
+  // 显示策略阶段
+  updateStrategyDisplay(strategyResult.adjustments);
   
   // 显示结果
-  showResult(winResult.totalWin, winResult.winDetails);
+  const winDetails = originalWinResult.winDetails;
+  if (strategyResult.modifiedGroups.length > originalWinResult.winningGroups.length) {
+    winDetails.push('智能奖励加成');
+  }
+  showResult(finalWin, winDetails);
   updateBalanceDisplay();
   
   // 高亮显示中奖符号
-  if (winResult.totalWin > 0) {
+  const groupsToHighlight = strategyResult.modifiedGroups.length > 0 ? 
+    strategyResult.modifiedGroups : originalWinResult.winningGroups;
+  
+  if (groupsToHighlight.length > 0 || originalWinResult.allCrownCells.length > 0) {
     await highlightWinningSymbols(
-      winResult.winningGroups, 
-      winResult.allCrownCells, 
-      winResult.crownCount, 
-      winResult.crownMultiplier
+      groupsToHighlight, 
+      originalWinResult.allCrownCells, 
+      originalWinResult.crownCount, 
+      originalWinResult.crownMultiplier
     );
   }
   
   // 游戏结束，恢复状态
   setSpinning(false);
   toggleControls(true);
+}
+
+// 更新策略显示
+function updateStrategyDisplay(adjustments) {
+  const strategyDisplay = document.getElementById('strategyDisplay');
+  if (!strategyDisplay) return;
+  
+  const phaseNames = {
+    'newbie': '🚀 新手期',
+    'growth': '📈 成长期',
+    'stable': '⏸️ 平缓期'
+  };
+  
+  strategyDisplay.innerHTML = `
+    <div class="strategy-phase">
+      <strong>${phaseNames[adjustments.phase]}</strong>
+      <span class="phase-detail">
+        第 ${adjustments.stats.totalSpins} 轮 | 
+        阶段 ${adjustments.stats.currentPhaseDuration} 轮 | 
+        当前盈亏: ${adjustments.stats.currentProfit >= 0 ? '+' : ''}${Math.round(adjustments.stats.currentProfit)}
+      </span>
+    </div>
+  `;
 }
 
 // 调整投注金额
@@ -117,7 +168,11 @@ export function onHouseEdgeChange(event) {
 export function initGame() {
   initSymbolRewards();
   initReels();
+  initStrategyState();
   updateBalanceDisplay();
+  
+  // 初始化策略显示
+  updateStrategyDisplay(getStrategyAdjustments());
   
   // 绑定事件
   document.getElementById('betMinus').addEventListener('click', () => adjustBet(-GAME_CONSTANTS.BET_STEP));

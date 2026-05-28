@@ -11,6 +11,8 @@
     <h1>🎰 幸运大转盘</h1>
 
     <div class="game-section">
+      <div class="strategy-display" id="strategyDisplay"></div>
+      
       <div class="reels-container" id="reelsContainer">
         <div class="reel"><div class="reel-content" id="reel0"></div></div>
         <div class="reel"><div class="reel-content" id="reel1"></div></div>
@@ -119,6 +121,67 @@
       <div class="config-summary" id="configSummary">
         <h3 style="color: #00ff88; margin-bottom: 10px;">✅ 配置已应用!</h3>
         <p>当前配置: RTP=<span id="summaryRtp">95%</span>, 波动率=<span id="summaryVol">5</span>, 庄家优势=<span id="summaryHouseEdge">5%</span></p>
+      </div>
+    </div>
+
+    <div class="strategy-section">
+      <h2>🧠 智能中奖策略说明</h2>
+      
+      <div class="strategy-grid">
+        <div class="strategy-card">
+          <h3>🚀 新手期 (前10轮)</h3>
+          <p><strong>目标:</strong> 让玩家快速上手，建立信心</p>
+          <ul>
+            <li>返还率: 120% (高于正常)</li>
+            <li>波动率: 8 (刺激感)</li>
+            <li>命中率: +80%</li>
+            <li>确保中奖: 每轮至少获得奖励</li>
+          </ul>
+        </div>
+
+        <div class="strategy-card">
+          <h3>📈 成长期</h3>
+          <p><strong>目标:</strong> 保持游戏趣味性和玩家粘性</p>
+          <ul>
+            <li>亏损时: 提升返还率至120%</li>
+            <li>盈利时: 标准返还率，适度波动</li>
+            <li>时长: 最多20轮</li>
+            <li>盈利超过5000时进入平缓期</li>
+          </ul>
+        </div>
+
+        <div class="strategy-card">
+          <h3>⏸️ 平缓期</h3>
+          <p><strong>目标:</strong> 回归标准，保持平衡</p>
+          <ul>
+            <li>返还率: 90% (标准)</li>
+            <li>波动率: 80% (减少大赢)</li>
+            <li>时长: 最多30轮</li>
+            <li>连输超过5轮时适度反弹</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="strategy-benefits">
+        <h3>✨ 策略优势</h3>
+        <div class="benefit-list">
+          <div class="benefit-item">
+            <strong>🎯 用户留存</strong>
+            <p>新手期确保中奖，防止早期流失</p>
+          </div>
+          <div class="benefit-item">
+            <strong>📊 合理周期</strong>
+            <p>奖励期与平缓期交替，保持游戏节奏</p>
+          </div>
+          <div class="benefit-item">
+            <strong>💸 风险控制</strong>
+            <p>盈利过多时自动降温，控制支付成本</p>
+          </div>
+          <div class="benefit-item">
+            <strong>🔄 智能恢复</strong>
+            <p>亏损或冷期时自动回暖，保持积极性</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
