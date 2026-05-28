@@ -1,0 +1,19 @@
+{
+  "name": "lucky-wheel-slot-game",
+  "version": "1.0.0",
+  "description": "幸运大转盘游戏讲解网页",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": ["slot", "game", "casino", "wheel"],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>幸运大转盘 - Slot Game</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>🎰 幸运大转盘</h1>
+
+    <div class="game-section">
+      <div class="strategy-display" id="strategyDisplay"></div>
+      
+      <div class="reels-container" id="reelsContainer">
+        <div class="reel"><div class="reel-content" id="reel0"></div></div>
+        <div class="reel"><div class="reel-content" id="reel1"></div></div>
+        <div class="reel"><div class="reel-content" id="reel2"></div></div>
+        <div class="reel"><div class="reel-content" id="reel3"></div></div>
+        <div class="reel"><div class="reel-content" id="reel4"></div></div>
+        <div class="reel"><div class="reel-content" id="reel5"></div></div>
+      </div>
+
+      <div class="control-panel">
+        <div class="bet-section">
+          <label>选择投注金额</label>
+          <div class="bet-selector">
+            <button class="bet-btn" id="betMinus">-</button>
+            <div class="bet-display" id="betDisplay">100</div>
+            <button class="bet-btn" id="betPlus">+</button>
+          </div>
+        </div>
+
+        <button class="spin-btn" id="spinBtn">🎲 SPIN</button>
+
+        <div class="balance-section">
+          <label>账户信息</label>
+          <div class="balance-info">
+            <span>金币: <span id="balance">10000</span></span>
+            <span>当前投注: <span id="currentBet">100</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-display">
+        <div class="result-text" id="resultText">点击 SPIN 开始游戏</div>
+        <div class="result-amount" id="resultAmount">0</div>
+      </div>
+    </div>
+
+    <div class="rules-section">
+      <h2>🎯 图案奖励配置</h2>
+      
+      <div class="symbol-rewards" id="symbolRewards"></div>
+
+      <p style="color: #ffd700; font-weight: bold; margin-top: 20px;">🎲 游戏规则：</p>
+      <ul style="margin-left: 20px; line-height: 1.8; color: #ccc;">
+        <li>选择投注金额后点击 SPIN 按钮开始转动</li>
+        <li>6个转盘会依次滚动停止，形成4排×6列的图案矩阵</li>
+        <li>8方向连通计算：相同图案在8个方向（上下左右及对角线）相连3个及以上就有奖励！</li>
+        <li>🃏 小丑牌特效：可以匹配任意图案，每连接一次奖励翻倍</li>
+        <li>👑 皇冠特效：每出现1个皇冠，全场奖励翻倍</li>
+        <li>中奖后，图案会逐个高亮显示并显示奖励数额</li>
+        <li>从左边列开始，8方向向右连接，不会回头</li>
+      </ul>
+    </div>
+
+    <div class="config-section">
+      <h2>⚙️ 游戏数值配置</h2>
+      
+      <div class="config-grid">
+        <div class="config-item">
+          <label>RTP (返还率)</label>
+          <input type="number" id="rtp" min="80" max="99" step="0.1" value="95.0">
+          <div class="description">
+            <strong>公式:</strong> RTP = (总返还金额 / 总投注金额) × 100<br>
+            <strong>说明:</strong> 表示长期来看，玩家每投注100金币，平均会返还的比例。范围80-99%，行业标准94-97%。
+          </div>
+        </div>
+
+        <div class="config-item">
+          <label>Volatility (波动率)</label>
+          <input type="number" id="volatility" min="1" max="10" step="0.5" value="5">
+          <div class="description">
+            <strong>说明:</strong> 衡量奖金分布的风险程度。1=低波动(频繁小赢)，10=高波动(稀有大赢)。<br>
+            <strong>影响:</strong> 高波动游戏可能长时间不中奖，但中奖金额巨大。
+          </div>
+        </div>
+
+        <div class="config-item">
+          <label>House Edge (庄家优势)</label>
+          <input type="number" id="houseEdge" min="1" max="20" step="0.1" value="5">
+          <div class="description">
+            <strong>公式:</strong> House Edge = 100% - RTP<br>
+            <strong>说明:</strong> 赌场在每笔投注上的预期利润率。行业标准3-6%。
+          </div>
+        </div>
+
+        <div class="config-item">
+          <label>Hit Rate (命中率)</label>
+          <input type="number" id="hitRate" min="5" max="50" step="1" value="20">
+          <div class="description">
+            <strong>说明:</strong> 每100次旋转中预计中奖的次数。范围5-50%。<br>
+            <strong>影响:</strong> 高命中率=频繁中奖，低命中率=大奖惊喜。
+          </div>
+        </div>
+
+        <div class="config-item">
+          <label>Max Win (最大赢取)</label>
+          <input type="number" id="maxWin" min="10" max="10000" step="10" value="100">
+          <div class="description">
+            <strong>说明:</strong> 单次旋转最高可赢得投注额的倍数。范围10-10000倍。<br>
+            <strong>影响:</strong> 设置合理的上限可控制风险和玩家体验。
+          </div>
+        </div>
+      </div>
+
+      <button class="apply-btn" id="applyBtn">应用配置</button>
+      
+      <div class="config-summary" id="configSummary">
+        <h3 style="color: #00ff88; margin-bottom: 10px;">✅ 配置已应用!</h3>
+        <p>当前配置: RTP=<span id="summaryRtp">95%</span>, 波动率=<span id="summaryVol">5</span>, 庄家优势=<span id="summaryHouseEdge">5%</span></p>
+      </div>
+    </div>
+
+    <div class="strategy-section">
+      <h2>🧠 智能中奖策略说明</h2>
+      
+      <div class="strategy-grid">
+        <div class="strategy-card">
+          <h3>🚀 新手期 (前10轮)</h3>
+          <p><strong>目标:</strong> 让玩家快速上手，建立信心</p>
+          <ul>
+            <li>返还率: 120% (高于正常)</li>
+            <li>波动率: 8 (刺激感)</li>
+            <li>命中率: +80%</li>
+            <li>确保中奖: 每轮至少获得奖励</li>
+          </ul>
+        </div>
+
+        <div class="strategy-card">
+          <h3>📈 成长期</h3>
+          <p><strong>目标:</strong> 保持游戏趣味性和玩家粘性</p>
+          <ul>
+            <li>亏损时: 提升返还率至120%</li>
+            <li>盈利时: 标准返还率，适度波动</li>
+            <li>时长: 最多20轮</li>
+            <li>盈利超过5000时进入平缓期</li>
+          </ul>
+        </div>
+
+        <div class="strategy-card">
+          <h3>⏸️ 平缓期</h3>
+          <p><strong>目标:</strong> 回归标准，保持平衡</p>
+          <ul>
+            <li>返还率: 90% (标准)</li>
+            <li>波动率: 80% (减少大赢)</li>
+            <li>时长: 最多30轮</li>
+            <li>连输超过5轮时适度反弹</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="strategy-benefits">
+        <h3>✨ 策略优势</h3>
+        <div class="benefit-list">
+          <div class="benefit-item">
+            <strong>🎯 用户留存</strong>
+            <p>新手期确保中奖，防止早期流失</p>
+          </div>
+          <div class="benefit-item">
+            <strong>📊 合理周期</strong>
+            <p>奖励期与平缓期交替，保持游戏节奏</p>
+          </div>
+          <div class="benefit-item">
+            <strong>💸 风险控制</strong>
+            <p>盈利过多时自动降温，控制支付成本</p>
+          </div>
+          <div class="benefit-item">
+            <strong>🔄 智能恢复</strong>
+            <p>亏损或冷期时自动回暖，保持积极性</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
