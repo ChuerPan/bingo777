@@ -48,6 +48,9 @@
       gap: 5px;
       margin-bottom: 30px;
       overflow: hidden;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 5px;
+      border-radius: 15px;
     }
 
     .reel {
@@ -76,10 +79,30 @@
       background: rgba(0, 0, 0, 0.3);
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
       transition: all 0.3s;
+      position: relative;
     }
 
-    .symbol.reward {
-      background: linear-gradient(135deg, #ffd700 0%, #ff6b6b 100%);
+    .symbol.crown {
+      animation: crownGlow 1.5s ease-in-out infinite;
+    }
+
+    .symbol.crown::before {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      right: 2px;
+      bottom: 2px;
+      border: 3px solid transparent;
+      border-radius: 8px;
+      background: linear-gradient(#ffd700, #ff6b6b) padding-box,
+                  linear-gradient(135deg, #ffd700, #ff6b6b, #ffd700) border-box;
+      pointer-events: none;
+    }
+
+    @keyframes crownGlow {
+      0%, 100% { box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
+      50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 0 50px rgba(255, 215, 0, 0.4); }
     }
 
     .symbol.highlight {
@@ -234,33 +257,33 @@
       color: #ffd700;
     }
 
-    .win-pool {
+    .symbol-rewards {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 15px;
       margin-bottom: 20px;
     }
 
-    .win-item {
+    .symbol-item {
       background: rgba(0, 0, 0, 0.3);
       padding: 15px;
       border-radius: 10px;
+      text-align: center;
       border: 2px solid rgba(255, 215, 0, 0.3);
-      transition: all 0.3s;
     }
 
-    .win-item:hover {
-      border-color: #ffd700;
-      transform: scale(1.02);
-    }
-
-    .win-pattern {
-      font-size: 1.5rem;
+    .symbol-icon {
+      font-size: 2rem;
       margin-bottom: 10px;
-      letter-spacing: 5px;
     }
 
-    .win-reward {
+    .symbol-name {
+      font-size: 0.9rem;
+      color: #ccc;
+      margin-bottom: 5px;
+    }
+
+    .symbol-base-reward {
       font-size: 1.2rem;
       color: #00ff88;
       font-weight: bold;
@@ -368,8 +391,8 @@
         gap: 10px;
       }
 
-      .win-pool {
-        grid-template-columns: 1fr;
+      .symbol-rewards {
+        grid-template-columns: repeat(3, 1fr);
       }
     }
   </style>
@@ -416,16 +439,17 @@
     </div>
 
     <div class="rules-section">
-      <h2>🎯 中奖池</h2>
+      <h2>🎯 图案奖励配置</h2>
       
-      <div class="win-pool" id="winPool"></div>
+      <div class="symbol-rewards" id="symbolRewards"></div>
 
-      <p style="color: #ffd700; font-weight: bold; margin-top: 20px;">🎲 游戏说明：</p>
+      <p style="color: #ffd700; font-weight: bold; margin-top: 20px;">🎲 游戏规则：</p>
       <ul style="margin-left: 20px; line-height: 1.8; color: #ccc;">
         <li>选择投注金额后点击 SPIN 按钮开始转动</li>
-        <li>6个转盘会依次滚动停止，从左到右形成图案组合</li>
-        <li>只有当6个图案完全匹配中奖池中的任意一个组合才能获得奖励</li>
-        <li>中奖后，图案会逐个亮起显示</li>
+        <li>6个转盘会依次滚动停止，形成4排×6列的图案矩阵</li>
+        <li>每排从左往右计算：每个图案获得基础奖励，连续相同图案奖励翻倍</li>
+        <li>👑 皇冠特效：每出现1个皇冠，全场奖励翻倍</li>
+        <li>中奖后，图案会逐个高亮显示</li>
       </ul>
     </div>
 
@@ -443,6 +467,15 @@
         </div>
 
         <div class="config-item">
+          <label>Volatility (波动率)</label>
+          <input type="number" id="volatility" min="1" max="10" step="0.5" value="5">
+          <div class="description">
+            <strong>说明:</strong> 衡量奖金分布的风险程度。1=低波动(频繁小赢)，10=高波动(稀有大赢)。<br>
+            <strong>影响:</strong> 高波动游戏可能长时间不中奖，但中奖金额巨大。
+          </div>
+        </div>
+
+        <div class="config-item">
           <label>House Edge (庄家优势)</label>
           <input type="number" id="houseEdge" min="1" max="20" step="0.1" value="5">
           <div class="description">
@@ -456,35 +489,30 @@
       
       <div class="config-summary" id="configSummary">
         <h3 style="color: #00ff88; margin-bottom: 10px;">✅ 配置已应用!</h3>
-        <p>当前配置: RTP=<span id="summaryRtp">95%</span>, 庄家优势=<span id="summaryHouseEdge">5%</span></p>
+        <p>当前配置: RTP=<span id="summaryRtp">95%</span>, 波动率=<span id="summaryVol">5</span>, 庄家优势=<span id="summaryHouseEdge">5%</span></p>
       </div>
     </div>
   </div>
 
   <script>
-    const SYMBOLS = ['💰', '💎', '👑', '⭐', '❤️', '🍀', '🍒', '🔔', '🟠', '🔶'];
+    const SYMBOL_CONFIG = {
+      '💰': { name: '金币', baseReward: 10, weight: 15 },
+      '💎': { name: '钻石', baseReward: 25, weight: 10 },
+      '👑': { name: '皇冠', baseReward: 50, weight: 5, isSpecial: true },
+      '⭐': { name: '星星', baseReward: 20, weight: 12 },
+      '❤️': { name: '爱心', baseReward: 15, weight: 14 },
+      '🍀': { name: '幸运草', baseReward: 30, weight: 8 },
+      '🍒': { name: '樱桃', baseReward: 8, weight: 18 },
+      '🔔': { name: '铃铛', baseReward: 12, weight: 16 },
+      '🟠': { name: '橙子', baseReward: 6, weight: 20 },
+      '🔶': { name: '条纹', baseReward: 4, weight: 22 }
+    };
 
-    const WIN_POOL = [
-      { pattern: ['💰', '💰', '💰', '💰', '💰', '💰'], reward: 10000 },
-      { pattern: ['💎', '💎', '💎', '💎', '💎', '💎'], reward: 5000 },
-      { pattern: ['👑', '👑', '👑', '👑', '👑', '👑'], reward: 3000 },
-      { pattern: ['⭐', '⭐', '⭐', '⭐', '⭐', '⭐'], reward: 2000 },
-      { pattern: ['❤️', '❤️', '❤️', '❤️', '❤️', '❤️'], reward: 1500 },
-      { pattern: ['🍀', '🍀', '🍀', '🍀', '🍀', '🍀'], reward: 1000 },
-      { pattern: ['🍒', '🍒', '🍒', '🍒', '🍒', '🍒'], reward: 800 },
-      { pattern: ['🔔', '🔔', '🔔', '🔔', '🔔', '🔔'], reward: 600 },
-      { pattern: ['🟠', '🟠', '🟠', '🟠', '🟠', '🟠'], reward: 400 },
-      { pattern: ['🔶', '🔶', '🔶', '🔶', '🔶', '🔶'], reward: 200 },
-      { pattern: ['💰', '💰', '💰', '💰', '💰', '💎'], reward: 500 },
-      { pattern: ['💎', '💎', '💎', '💎', '💎', '👑'], reward: 300 },
-      { pattern: ['👑', '👑', '👑', '👑', '⭐', '⭐'], reward: 200 },
-      { pattern: ['❤️', '❤️', '❤️', '🍀', '🍀', '🍀'], reward: 150 },
-      { pattern: ['🍒', '🍒', '🔔', '🔔', '🟠', '🟠'], reward: 100 },
-      { pattern: ['💰', '💎', '👑', '⭐', '❤️', '🍀'], reward: 50 }
-    ];
+    const SYMBOLS = Object.keys(SYMBOL_CONFIG);
 
     let config = {
       rtp: 95.0,
+      volatility: 5,
       houseEdge: 5
     };
 
@@ -492,15 +520,21 @@
     let currentBet = 100;
     let isSpinning = false;
     const SYMBOLS_PER_REEL = 20;
+    const VISIBLE_ROWS = 4;
 
-    function initWinPool() {
-      const poolContainer = document.getElementById('winPool');
-      poolContainer.innerHTML = WIN_POOL.map(win => `
-        <div class="win-item">
-          <div class="win-pattern">${win.pattern.join(' ')}</div>
-          <div class="win-reward">+${win.reward}x</div>
-        </div>
-      `).join('');
+    function initSymbolRewards() {
+      const container = document.getElementById('symbolRewards');
+      container.innerHTML = SYMBOLS.map(symbol => {
+        const cfg = SYMBOL_CONFIG[symbol];
+        const isCrown = symbol === '👑';
+        return `
+          <div class="symbol-item${isCrown ? ' crown' : ''}">
+            <div class="symbol-icon">${symbol}</div>
+            <div class="symbol-name">${cfg.name}${isCrown ? ' (特效)' : ''}</div>
+            <div class="symbol-base-reward">${cfg.baseReward}x</div>
+          </div>
+        `;
+      }).join('');
     }
 
     function initReels() {
@@ -509,7 +543,8 @@
         let content = '';
         for (let j = 0; j < SYMBOLS_PER_REEL; j++) {
           const symbol = getRandomSymbol();
-          content += `<div class="symbol">${symbol}</div>`;
+          const isCrown = symbol === '👑';
+          content += `<div class="symbol${isCrown ? ' crown' : ''}">${symbol}</div>`;
         }
         reel.innerHTML = content;
         reel.style.transform = 'translateY(0)';
@@ -517,7 +552,14 @@
     }
 
     function getRandomSymbol() {
-      return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
+      const totalWeight = Object.values(SYMBOL_CONFIG).reduce((sum, cfg) => sum + cfg.weight, 0);
+      let rand = Math.random() * totalWeight;
+      
+      for (const [symbol, cfg] of Object.entries(SYMBOL_CONFIG)) {
+        rand -= cfg.weight;
+        if (rand <= 0) return symbol;
+      }
+      return SYMBOLS[0];
     }
 
     function spinReels() {
@@ -530,16 +572,16 @@
       balance -= currentBet;
       updateBalance();
       
-      const resultSymbols = [];
+      const resultMatrix = [];
       let delay = 0;
       
-      for (let i = 0; i < 6; i++) {
+      for (let col = 0; col < 6; col++) {
         setTimeout(() => {
-          animateReel(i, (symbol) => {
-            resultSymbols.push(symbol);
-            if (resultSymbols.length === 6) {
+          animateReel(col, (columnSymbols) => {
+            resultMatrix[col] = columnSymbols;
+            if (resultMatrix.length === 6) {
               setTimeout(() => {
-                checkWin(resultSymbols);
+                checkWin(resultMatrix);
               }, 300);
             }
           });
@@ -550,12 +592,16 @@
 
     function animateReel(reelIndex, callback) {
       const reel = document.getElementById(`reel${reelIndex}`);
-      const finalSymbol = getRandomSymbol();
+      const columnSymbols = [];
+      
+      for (let i = 0; i < SYMBOLS_PER_REEL; i++) {
+        columnSymbols.push(getRandomSymbol());
+      }
       
       let content = '';
-      for (let j = 0; j < SYMBOLS_PER_REEL; j++) {
-        const symbol = j === SYMBOLS_PER_REEL - 4 ? finalSymbol : getRandomSymbol();
-        content += `<div class="symbol">${symbol}</div>`;
+      for (const symbol of columnSymbols) {
+        const isCrown = symbol === '👑';
+        content += `<div class="symbol${isCrown ? ' crown' : ''}">${symbol}</div>`;
       }
       reel.innerHTML = content;
       
@@ -568,7 +614,7 @@
         const progress = Math.min(elapsed / spinDuration, 1);
         
         const easeOut = 1 - Math.pow(1 - progress, 3);
-        const targetY = -(SYMBOLS_PER_REEL - 4) * 80;
+        const targetY = -(SYMBOLS_PER_REEL - VISIBLE_ROWS) * 80;
         currentY = easeOut * targetY;
         
         reel.style.transform = `translateY(${currentY}px)`;
@@ -576,38 +622,68 @@
         if (progress < 1) {
           requestAnimationFrame(animate);
         } else {
-          callback(finalSymbol);
+          const visibleSymbols = columnSymbols.slice(-VISIBLE_ROWS);
+          callback(visibleSymbols);
         }
       }
       
       animate();
     }
 
-    function checkWin(symbols) {
+    function checkWin(matrix) {
       let totalWin = 0;
-      let winningPattern = null;
+      let winDetails = [];
+      const highlightedCells = [];
+      let crownCount = 0;
 
-      for (const win of WIN_POOL) {
-        let match = true;
-        for (let i = 0; i < 6; i++) {
-          if (symbols[i] !== win.pattern[i]) {
-            match = false;
-            break;
+      for (let row = 0; row < VISIBLE_ROWS; row++) {
+        let rowWin = 0;
+        let prevSymbol = null;
+        let consecutiveCount = 0;
+        
+        for (let col = 0; col < 6; col++) {
+          const symbol = matrix[col][row];
+          
+          if (symbol === '👑') {
+            crownCount++;
           }
+          
+          if (symbol === prevSymbol && prevSymbol !== null) {
+            consecutiveCount++;
+          } else {
+            consecutiveCount = 1;
+          }
+          
+          const baseReward = SYMBOL_CONFIG[symbol].baseReward;
+          const multiplier = Math.pow(2, consecutiveCount - 1);
+          const cellWin = baseReward * multiplier * currentBet;
+          rowWin += cellWin;
+          
+          if (cellWin > 0) {
+            highlightedCells.push({ row, col, win: cellWin, symbol });
+          }
+          
+          prevSymbol = symbol;
         }
-        if (match) {
-          totalWin = win.reward * currentBet;
-          winningPattern = win.pattern;
-          break;
+        
+        if (rowWin > 0) {
+          winDetails.push(`第${row + 1}排: ${rowWin}`);
         }
+        totalWin += rowWin;
+      }
+
+      const crownMultiplier = Math.pow(2, crownCount);
+      if (crownCount > 0) {
+        totalWin *= crownMultiplier;
+        winDetails.push(`皇冠加成: ×${crownMultiplier} (${crownCount}个皇冠)`);
       }
 
       if (totalWin > 0) {
         balance += totalWin;
-        document.getElementById('resultText').textContent = '🎉 恭喜中奖!';
+        document.getElementById('resultText').textContent = `🎉 恭喜中奖! ${winDetails.join(' | ')}`;
         document.getElementById('resultAmount').textContent = `+${totalWin}`;
         document.getElementById('resultAmount').className = 'result-amount win';
-        highlightSymbols(winningPattern);
+        highlightWinningCells(highlightedCells);
       } else {
         document.getElementById('resultText').textContent = '😔 未中奖，再接再厉!';
         document.getElementById('resultAmount').textContent = `-${currentBet}`;
@@ -621,18 +697,19 @@
       updateBalance();
     }
 
-    function highlightSymbols(pattern) {
-      let highlightIndex = 0;
+    function highlightWinningCells(cells) {
+      let cellIndex = 0;
       
       function highlightNext() {
-        if (highlightIndex < 6) {
-          const reel = document.getElementById(`reel${highlightIndex}`);
+        if (cellIndex < cells.length) {
+          const cell = cells[cellIndex];
+          const reel = document.getElementById(`reel${cell.col}`);
           const symbols = reel.querySelectorAll('.symbol');
-          const targetSymbol = symbols[symbols.length - 4];
+          const targetSymbol = symbols[symbols.length - VISIBLE_ROWS + cell.row];
           targetSymbol.classList.add('highlight');
           
-          highlightIndex++;
-          setTimeout(highlightNext, 300);
+          cellIndex++;
+          setTimeout(highlightNext, 150);
         } else {
           setTimeout(() => {
             isSpinning = false;
@@ -662,11 +739,13 @@
 
     function applyConfig() {
       config.rtp = parseFloat(document.getElementById('rtp').value);
+      config.volatility = parseFloat(document.getElementById('volatility').value);
       config.houseEdge = parseFloat(document.getElementById('houseEdge').value);
 
       document.getElementById('houseEdge').value = (100 - config.rtp).toFixed(1);
 
       document.getElementById('summaryRtp').textContent = `${config.rtp}%`;
+      document.getElementById('summaryVol').textContent = config.volatility;
       document.getElementById('summaryHouseEdge').textContent = `${config.houseEdge}%`;
       
       const summary = document.getElementById('configSummary');
@@ -687,7 +766,7 @@
       document.getElementById('rtp').value = (100 - parseFloat(e.target.value)).toFixed(1);
     });
 
-    initWinPool();
+    initSymbolRewards();
     initReels();
   </script>
 </body>
