@@ -2,29 +2,43 @@
 import { SYMBOL_CONFIG, GAME_CONSTANTS } from './config.js';
 import { gameState } from './gameState.js';
 
-// 8 方向偏移量
-const DIRECTIONS = [
+// 只向右扩展的方向（不包括向左回溯）
+const RIGHT_DIRECTIONS = [
+  [0, 1],   // 右
+  [-1, 1],  // 右上
+  [1, 1],   // 右下
+  [-1, 0],  // 上
+  [1, 0]    // 下
+];
+
+// 8方向（用于判断是否连接）
+const ALL_DIRECTIONS = [
   [-1, -1], [-1, 0], [-1, 1],
   [0, -1],          [0, 1],
   [1, -1],  [1, 0], [1, 1]
 ];
 
-// 使用 BFS 找出连通分量
+// 检查两个格子是否8方向相连
+function areConnected(col1, row1, col2, row2) {
+  const dCol = col2 - col1;
+  const dRow = row2 - row1;
+  return Math.abs(dCol) <= 1 && Math.abs(dRow) <= 1 && !(dCol === 0 && dRow === 0);
+}
+
+// 使用BFS找连通分量（只向右扩展）
 function findConnectedComponent(matrix, startCol, startRow, visited, baseSymbol) {
-  const queue = [[startCol, startRow]];
   const component = [];
-  let groupJokerCount = 0;
+  const groupJokerCount = { count: 0 };
+  const queue = [[startCol, startRow, startCol]]; // [col, row, leftMostCol]
   
   while (queue.length > 0) {
-    const [col, row] = queue.shift();
+    const [col, row, leftMostCol] = queue.shift();
     
-    // 检查边界
     if (col < 0 || col >= GAME_CONSTANTS.REEL_COUNT || 
         row < 0 || row >= GAME_CONSTANTS.VISIBLE_ROWS) {
       continue;
     }
     
-    // 检查是否已访问
     const key = `${col},${row}`;
     if (visited.has(key)) {
       continue;
@@ -35,23 +49,29 @@ function findConnectedComponent(matrix, startCol, startRow, visited, baseSymbol)
     
     if (isMatch) {
       visited.add(key);
-      component.push({ col, row, symbol });
+      component.push({ col, row, symbol, leftMostCol });
       
       if (SYMBOL_CONFIG[symbol].isJoker) {
-        groupJokerCount++;
+        groupJokerCount.count++;
       }
       
-      // 探索 8 个方向
-      for (const [dRow, dCol] of DIRECTIONS) {
-        queue.push([col + dCol, row + dRow]);
+      // 只向右扩展
+      for (const [dRow, dCol] of RIGHT_DIRECTIONS) {
+        const newLeftMost = dCol < 0 ? col : leftMostCol;
+        queue.push([col + dCol, row + dRow, newLeftMost]);
       }
     }
   }
   
-  return { component, groupJokerCount };
+  return { component, groupJokerCount: groupJokerCount.count };
 }
 
-// 分析矩阵 - 找出所有 8 方向连通的符号组合
+// 检查连通分量是否从左边列开始
+function isFromLeftEdge(component) {
+  return component.some(cell => cell.col === 0);
+}
+
+// 分析矩阵 - 找出所有从左边开始的8方向连通组合
 export function analyzeWinningMatrix(matrix) {
   let totalWin = 0;
   let winDetails = [];
@@ -76,9 +96,9 @@ export function analyzeWinningMatrix(matrix) {
     }
   }
 
-  // 寻找所有连通分量
-  for (let row = 0; row < GAME_CONSTANTS.VISIBLE_ROWS; row++) {
-    for (let col = 0; col < GAME_CONSTANTS.REEL_COUNT; col++) {
+  // 只从左边列开始寻找起点
+  for (let col = 0; col < GAME_CONSTANTS.REEL_COUNT; col++) {
+    for (let row = 0; row < GAME_CONSTANTS.VISIBLE_ROWS; row++) {
       const key = `${col},${row}`;
       if (visited.has(key)) {
         continue;
@@ -88,9 +108,8 @@ export function analyzeWinningMatrix(matrix) {
       
       // 如果当前是小丑，先确定基础符号
       if (SYMBOL_CONFIG[baseSymbol].isJoker) {
-        // 查找周围是否有非小丑符号
         let found = false;
-        for (const [dRow, dCol] of DIRECTIONS) {
+        for (const [dRow, dCol] of ALL_DIRECTIONS) {
           const nCol = col + dCol;
           const nRow = row + dRow;
           if (nCol >= 0 && nCol < GAME_CONSTANTS.REEL_COUNT && 
@@ -103,7 +122,6 @@ export function analyzeWinningMatrix(matrix) {
             }
           }
         }
-        // 如果周围全是小丑，就用小丑作为基础符号
         if (!found) {
           baseSymbol = '🃏';
         }
@@ -116,8 +134,8 @@ export function analyzeWinningMatrix(matrix) {
       
       const connectedCount = component.length;
       
-      // 只有连通 3 个及以上才有奖励
-      if (connectedCount >= 3) {
+      // 只处理从左边列开始的连通分量
+      if (connectedCount >= 3 && isFromLeftEdge(component)) {
         const cfg = SYMBOL_CONFIG[baseSymbol];
         let multiplier = 0;
         
@@ -132,13 +150,11 @@ export function analyzeWinningMatrix(matrix) {
         
         const winAmount = multiplier * gameState.currentBet;
         
-        // 转换格式并按从左到右排序
+        // 按从左到右排序
         const groupCells = component
           .map(c => ({ col: c.col, row: c.row }))
           .sort((a, b) => {
-            // 先按列（左到右）
             if (a.col !== b.col) return a.col - b.col;
-            // 再按行（上到下）
             return a.row - b.row;
           });
         
@@ -151,7 +167,7 @@ export function analyzeWinningMatrix(matrix) {
           cells: groupCells
         });
         
-        winDetails.push(`8方向连通 ${baseSymbol}×${connectedCount}${groupJokerCount > 0 ? '+🃏×' + groupJokerCount : ''}: ${winAmount}`);
+        winDetails.push(`从左连接 ${baseSymbol}×${connectedCount}${groupJokerCount > 0 ? '+🃏×' + groupJokerCount : ''}: ${winAmount}`);
         totalWin += winAmount;
       }
     }
@@ -176,7 +192,7 @@ export function analyzeWinningMatrix(matrix) {
   };
 }
 
-// 应用奖励 - 更新余额
+// 应用奖励
 export function applyWin(totalWin) {
   if (totalWin > 0) {
     gameState.balance += totalWin;

@@ -86,11 +86,15 @@ export function applyConfig() {
   const rtp = parseFloat(document.getElementById('rtp').value);
   const volatility = parseFloat(document.getElementById('volatility').value);
   const houseEdge = parseFloat(document.getElementById('houseEdge').value);
+  const hitRate = parseFloat(document.getElementById('hitRate').value);
+  const maxWin = parseFloat(document.getElementById('maxWin').value);
   
   updateConfig({
     rtp,
     volatility,
-    houseEdge
+    houseEdge,
+    hitRate,
+    maxWin
   });
   
   document.getElementById('houseEdge').value = (100 - rtp).toFixed(1);

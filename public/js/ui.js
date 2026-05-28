@@ -44,139 +44,153 @@ export function showResult(totalWin, winDetails) {
   }
 }
 
-// 显示浮动文本（奖励提示）- 修复版
+// 简单直接的浮动文字显示函数
 export function showFloatingText(text, x, y, extraClass = '') {
   const container = document.getElementById('reelsContainer');
   const floatText = document.createElement('div');
   floatText.className = 'floating-text ' + extraClass;
   floatText.textContent = text;
-  // 直接设置绝对位置，确保动画正确
-  floatText.style.left = `${x}px`;
-  floatText.style.top = `${y}px`;
+  floatText.style.position = 'absolute';
+  floatText.style.left = x + 'px';
+  floatText.style.top = y + 'px';
+  floatText.style.transform = 'translate(-50%, -50%)';
+  floatText.style.zIndex = '300';
   container.appendChild(floatText);
   
+  // 动画结束后移除
   setTimeout(() => {
-    floatText.remove();
+    if (floatText.parentNode) {
+      floatText.parentNode.removeChild(floatText);
+    }
   }, 1500);
 }
 
-// 高亮中奖符号并显示奖励 - 逐组高亮并显示奖励总和
-export function highlightWinningSymbols(winningGroups, allCrownCells, crownCount, crownMultiplier) {
-  // 按组依次高亮
-  let groupIndex = 0;
+// 在指定位置创建浮动文字
+function createFloatAtPosition(text, col, row, extraClass = '') {
+  const reel = document.getElementById(`reel${col}`);
+  if (!reel) return;
   
+  const symbols = reel.querySelectorAll('.symbol');
+  const targetIndex = symbols.length - GAME_CONSTANTS.VISIBLE_ROWS + row;
+  const targetSymbol = symbols[targetIndex];
+  
+  if (!targetSymbol) return;
+  
+  // 获取目标元素的位置
+  const targetRect = targetSymbol.getBoundingClientRect();
+  const container = document.getElementById('reelsContainer');
+  const containerRect = container.getBoundingClientRect();
+  
+  const x = targetRect.left - containerRect.left + targetRect.width / 2;
+  const y = targetRect.top - containerRect.top + targetRect.height / 2;
+  
+  showFloatingText(text, x, y, extraClass);
+}
+
+// 高亮中奖符号并显示奖励 - 逐组高亮
+export function highlightWinningSymbols(winningGroups, allCrownCells, crownCount, crownMultiplier) {
   return new Promise((resolve) => {
-    function highlightGroup() {
-      if (groupIndex >= winningGroups.length) {
-        // 所有组高亮完成，现在处理皇冠
-        let crownIndex = 0;
-        function highlightNextCrown() {
-          if (crownIndex < allCrownCells.length) {
-            const cell = allCrownCells[crownIndex];
-            setTimeout(() => {
-              const reel = document.getElementById(`reel${cell.col}`);
-              const symbols = reel.querySelectorAll('.symbol');
-              const targetIndex = symbols.length - GAME_CONSTANTS.VISIBLE_ROWS + cell.row;
-              const targetSymbol = symbols[targetIndex];
-              
-              if (targetSymbol) {
-                targetSymbol.classList.add('highlight');
-                
-                const containerRect = document.getElementById('reelsContainer').getBoundingClientRect();
-                const reelRect = reel.getBoundingClientRect();
-                const x = reelRect.left - containerRect.left + reelRect.width / 2;
-                const y = reelRect.top - containerRect.top + cell.row * 80;
-                
-                showFloatingText('👑', x, y, 'crown');
-                
-                setTimeout(() => {
-                  targetSymbol.classList.remove('highlight');
-                }, 1200);
-              }
-              
-              crownIndex++;
-              highlightNextCrown();
-            }, 150);
-          } else if (crownMultiplier > 1) {
-            setTimeout(() => {
-              const container = document.getElementById('reelsContainer');
-              const x = container.offsetWidth / 2;
-              const y = container.offsetHeight / 2;
-              showFloatingText(`皇冠加成 ×${crownMultiplier}`, x, y, 'crown');
-            }, 200);
-            setTimeout(resolve, 3000);
-          } else {
-            setTimeout(resolve, 2000);
-          }
-        }
-        
-        highlightNextCrown();
+    // 如果没有中奖组合，直接结束
+    if (winningGroups.length === 0 && allCrownCells.length === 0) {
+      setTimeout(resolve, 500);
+      return;
+    }
+    
+    let groupIdx = 0;
+    let isProcessingCrown = false;
+    
+    function processGroup() {
+      if (groupIdx >= winningGroups.length) {
+        // 开始处理皇冠
+        isProcessingCrown = true;
+        processCrown();
         return;
       }
       
-      const group = winningGroups[groupIndex];
-      let cellIndex = 0;
+      const group = winningGroups[groupIdx];
+      let cellIdx = 0;
       
       function highlightCell() {
-        if (cellIndex >= group.cells.length) {
-          // 该组所有符号高亮完成，停顿并显示奖励总和
+        if (cellIdx >= group.cells.length) {
+          // 该组高亮完成，停顿并显示奖励总和
           setTimeout(() => {
-            // 在该组中间位置显示奖励总和
+            // 显示该组奖励总和
             const midCell = group.cells[Math.floor(group.cells.length / 2)];
-            const reel = document.getElementById(`reel${midCell.col}`);
-            const container = document.getElementById('reelsContainer');
-            const containerRect = container.getBoundingClientRect();
-            const reelRect = reel.getBoundingClientRect();
-            const x = reelRect.left - containerRect.left + reelRect.width / 2;
-            const y = reelRect.top - containerRect.top + midCell.row * 80;
+            createFloatAtPosition(`+${group.winAmount}`, midCell.col, midCell.row, 'group-total');
             
-            showFloatingText(`+${group.winAmount}`, x, y, 'group-total');
-            
-            // 停顿1.5秒后继续下一组
+            // 1.5秒后继续下一组
             setTimeout(() => {
-              groupIndex++;
-              highlightGroup();
+              groupIdx++;
+              processGroup();
             }, 1500);
-          }, 300);
+          }, 200);
           return;
         }
         
-        const cell = group.cells[cellIndex];
-        const reel = document.getElementById(`reel${cell.col}`);
-        const symbols = reel.querySelectorAll('.symbol');
-        const targetIndex = symbols.length - GAME_CONSTANTS.VISIBLE_ROWS + cell.row;
-        const targetSymbol = symbols[targetIndex];
+        const cell = group.cells[cellIdx];
         
-        if (targetSymbol) {
-          targetSymbol.classList.add('highlight');
-          
-          // 每个符号高亮时显示贡献的奖励
-          const cellWin = Math.round(group.winAmount / group.cells.length);
-          const container = document.getElementById('reelsContainer');
-          const containerRect = container.getBoundingClientRect();
-          const reelRect = reel.getBoundingClientRect();
-          const x = reelRect.left - containerRect.left + reelRect.width / 2;
-          const y = reelRect.top - containerRect.top + cell.row * 80;
-          
-          showFloatingText(`+${cellWin}`, x, y, '');
-          
-          // 高亮0.5秒后移除
-          setTimeout(() => {
-            targetSymbol.classList.remove('highlight');
-          }, 500);
-        }
+        // 高亮当前符号
+        highlightSymbol(cell.col, cell.row, true);
         
-        cellIndex++;
+        // 显示单个符号的奖励
+        const cellReward = Math.round(group.winAmount / group.cells.length);
+        setTimeout(() => {
+          createFloatAtPosition(`+${cellReward}`, cell.col, cell.row, '');
+        }, 50);
         
-        // 每个符号间隔150ms
+        cellIdx++;
+        
+        // 150ms后继续下一个符号
         setTimeout(highlightCell, 150);
       }
       
       highlightCell();
     }
     
-    highlightGroup();
+    function processCrown() {
+      if (!isProcessingCrown) return;
+      
+      if (allCrownCells.length === 0) {
+        if (crownMultiplier > 1) {
+          // 显示皇冠加成
+          const container = document.getElementById('reelsContainer');
+          const x = container.offsetWidth / 2;
+          const y = container.offsetHeight / 2;
+          showFloatingText(`皇冠加成 ×${crownMultiplier}`, x, y, 'crown');
+        }
+        setTimeout(resolve, crownMultiplier > 1 ? 3000 : 2000);
+        return;
+      }
+      
+      const cell = allCrownCells.shift();
+      
+      // 高亮皇冠
+      highlightSymbol(cell.col, cell.row, true);
+      createFloatAtPosition('👑', cell.col, cell.row, 'crown');
+      
+      setTimeout(processCrown, 200);
+    }
+    
+    processGroup();
   });
+}
+
+// 高亮/取消高亮指定位置的符号
+function highlightSymbol(col, row, highlight) {
+  const reel = document.getElementById(`reel${col}`);
+  if (!reel) return;
+  
+  const symbols = reel.querySelectorAll('.symbol');
+  const targetIndex = symbols.length - GAME_CONSTANTS.VISIBLE_ROWS + row;
+  const targetSymbol = symbols[targetIndex];
+  
+  if (!targetSymbol) return;
+  
+  if (highlight) {
+    targetSymbol.classList.add('highlight');
+  } else {
+    targetSymbol.classList.remove('highlight');
+  }
 }
 
 // 禁用/启用控制按钮
