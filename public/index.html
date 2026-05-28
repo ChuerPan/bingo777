@@ -47,7 +47,6 @@
       justify-content: center;
       gap: 5px;
       margin-bottom: 30px;
-      overflow: hidden;
       background: rgba(0, 0, 0, 0.3);
       padding: 5px;
       border-radius: 15px;
@@ -143,13 +142,13 @@
 
     .floating-text {
       position: absolute;
-      font-size: 1.5rem;
+      font-size: 1.8rem;
       font-weight: bold;
       color: #00ff88;
       text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 30px #00ff88;
-      animation: floatUp 1.5s ease-out forwards;
+      animation: floatUp 2s ease-out forwards;
       pointer-events: none;
-      z-index: 100;
+      z-index: 1000;
       white-space: nowrap;
     }
 
@@ -166,15 +165,15 @@
     @keyframes floatUp {
       0% {
         opacity: 0;
-        transform: translate(-50%, 0) scale(0.5);
+        transform: translate(-50%, 0) scale(0.3);
       }
       20% {
         opacity: 1;
-        transform: translate(-50%, -10px) scale(1.2);
+        transform: translate(-50%, -20px) scale(1.4);
       }
       100% {
         opacity: 0;
-        transform: translate(-50%, -60px) scale(1);
+        transform: translate(-50%, -80px) scale(1);
       }
     }
 
@@ -472,12 +471,12 @@
 
     <div class="game-section">
       <div class="reels-container" id="reelsContainer">
-        <div class="reel"><div class="reel-content" id="reel0"></div></div>
-        <div class="reel"><div class="reel-content" id="reel1"></div></div>
-        <div class="reel"><div class="reel-content" id="reel2"></div></div>
-        <div class="reel"><div class="reel-content" id="reel3"></div></div>
-        <div class="reel"><div class="reel-content" id="reel4"></div></div>
-        <div class="reel"><div class="reel-content" id="reel5"></div></div>
+        <div class="reel" id="reel0"></div>
+        <div class="reel" id="reel1"></div>
+        <div class="reel" id="reel2"></div>
+        <div class="reel" id="reel3"></div>
+        <div class="reel" id="reel4"></div>
+        <div class="reel" id="reel5"></div>
       </div>
 
       <div class="control-panel">
@@ -516,7 +515,7 @@
       <ul style="margin-left: 20px; line-height: 1.8; color: #ccc;">
         <li>选择投注金额后点击 SPIN 按钮开始转动</li>
         <li>6个转盘会依次滚动停止，形成4排×6列的图案矩阵</li>
-        <li>每排从左往右计算：连续3个及以上相同图案才有奖励，数量越多奖励越高</li>
+        <li>8方向连通：相同图案在上下左右斜向连通，3个及以上中奖</li>
         <li>🃏 小丑牌特效：可以匹配任意图案，每连接一次奖励翻倍</li>
         <li>👑 皇冠特效：每出现1个皇冠，全场奖励翻倍</li>
         <li>中奖后，图案会逐个高亮显示并显示奖励数额</li>
@@ -565,17 +564,16 @@
   </div>
 
   <script>
-    // 重新配置图案奖励 - 更符合RTP要求
     const SYMBOL_CONFIG = {
-      '🃏': { name: '小丑', baseReward: 1, weight: 2, isJoker: true, consecutive3: 5, consecutive4: 15, consecutive5: 50, consecutive6: 200 },
-      '💰': { name: '金币', baseReward: 0.1, weight: 25, consecutive3: 0.5, consecutive4: 1.5, consecutive5: 5, consecutive6: 20 },
-      '💎': { name: '钻石', baseReward: 0.2, weight: 15, consecutive3: 0.8, consecutive4: 2.5, consecutive5: 8, consecutive6: 35 },
-      '👑': { name: '皇冠', baseReward: 0.5, weight: 3, isSpecial: true, consecutive3: 2, consecutive4: 5, consecutive5: 15, consecutive6: 50 },
-      '⭐': { name: '星星', baseReward: 0.15, weight: 20, consecutive3: 0.6, consecutive4: 2, consecutive5: 6, consecutive6: 25 },
-      '❤️': { name: '爱心', baseReward: 0.12, weight: 22, consecutive3: 0.55, consecutive4: 1.8, consecutive5: 5.5, consecutive6: 22 },
-      '🔔': { name: '铃铛', baseReward: 0.08, weight: 28, consecutive3: 0.4, consecutive4: 1.2, consecutive5: 4, consecutive6: 18 },
-      '🟠': { name: '橙子', baseReward: 0.05, weight: 32, consecutive3: 0.3, consecutive4: 1, consecutive5: 3, consecutive6: 15 },
-      '🔶': { name: '条纹', baseReward: 0.03, weight: 35, consecutive3: 0.25, consecutive4: 0.8, consecutive5: 2.5, consecutive6: 12 }
+      '🃏': { name: '小丑', weight: 2, isJoker: true, consecutive3: 5, consecutive4: 15, consecutive5: 50, consecutive6: 200 },
+      '💰': { name: '金币', weight: 25, consecutive3: 0.5, consecutive4: 1.5, consecutive5: 5, consecutive6: 20 },
+      '💎': { name: '钻石', weight: 15, consecutive3: 0.8, consecutive4: 2.5, consecutive5: 8, consecutive6: 35 },
+      '👑': { name: '皇冠', weight: 3, isSpecial: true, consecutive3: 2, consecutive4: 5, consecutive5: 15, consecutive6: 50 },
+      '⭐': { name: '星星', weight: 20, consecutive3: 0.6, consecutive4: 2, consecutive5: 6, consecutive6: 25 },
+      '❤️': { name: '爱心', weight: 22, consecutive3: 0.55, consecutive4: 1.8, consecutive5: 5.5, consecutive6: 22 },
+      '🔔': { name: '铃铛', weight: 28, consecutive3: 0.4, consecutive4: 1.2, consecutive5: 4, consecutive6: 18 },
+      '🟠': { name: '橙子', weight: 32, consecutive3: 0.3, consecutive4: 1, consecutive5: 3, consecutive6: 15 },
+      '🔶': { name: '条纹', weight: 35, consecutive3: 0.25, consecutive4: 0.8, consecutive5: 2.5, consecutive6: 12 }
     };
 
     const SYMBOLS = Object.keys(SYMBOL_CONFIG);
@@ -591,6 +589,7 @@
     let isSpinning = false;
     const SYMBOLS_PER_REEL = 20;
     const VISIBLE_ROWS = 4;
+    const COLS = 6;
 
     function initSymbolRewards() {
       const container = document.getElementById('symbolRewards');
@@ -612,7 +611,7 @@
     }
 
     function initReels() {
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < COLS; i++) {
         const reel = document.getElementById(`reel${i}`);
         let content = '';
         for (let j = 0; j < SYMBOLS_PER_REEL; j++) {
@@ -629,9 +628,7 @@
     function getRandomSymbol() {
       let totalWeight = Object.values(SYMBOL_CONFIG).reduce((sum, cfg) => sum + cfg.weight, 0);
       
-      // 根据波动率调整权重
       if (config.volatility > 7) {
-        // 高波动：稀有高奖励图案更容易出现
         totalWeight = Object.values(SYMBOL_CONFIG).reduce((sum, cfg) => {
           if (cfg.isSpecial || cfg.isJoker || cfg.consecutive6 >= 30) {
             return sum + cfg.weight * 2;
@@ -639,7 +636,6 @@
           return sum + cfg.weight * 0.7;
         }, 0);
       } else if (config.volatility < 3) {
-        // 低波动：普通图案更容易出现
         totalWeight = Object.values(SYMBOL_CONFIG).reduce((sum, cfg) => {
           if (cfg.isSpecial || cfg.isJoker || cfg.consecutive6 >= 30) {
             return sum + cfg.weight * 0.4;
@@ -683,17 +679,17 @@
       balance -= currentBet;
       updateBalance();
       
-      // 清除之前的高亮
       document.querySelectorAll('.symbol.highlight').forEach(el => el.classList.remove('highlight'));
+      document.querySelectorAll('.floating-text').forEach(el => el.remove());
       
       const resultMatrix = [];
       let delay = 0;
       
-      for (let col = 0; col < 6; col++) {
+      for (let col = 0; col < COLS; col++) {
         setTimeout(() => {
           animateReel(col, (columnSymbols) => {
             resultMatrix[col] = columnSymbols;
-            if (resultMatrix.length === 6) {
+            if (resultMatrix.length === COLS) {
               setTimeout(() => {
                 checkWin(resultMatrix);
               }, 300);
@@ -745,104 +741,115 @@
       animate();
     }
 
+    function findConnectedGroups(matrix) {
+      const visited = new Set();
+      const groups = [];
+      const directions = [
+        [-1, -1], [-1, 0], [-1, 1],
+        [0, -1],          [0, 1],
+        [1, -1],  [1, 0], [1, 1]
+      ];
+
+      for (let row = 0; row < VISIBLE_ROWS; row++) {
+        for (let col = 0; col < COLS; col++) {
+          const key = `${row},${col}`;
+          if (!visited.has(key)) {
+            const symbol = matrix[col][row];
+            if (SYMBOL_CONFIG[symbol].isJoker) continue;
+            
+            const group = [];
+            const queue = [{row, col}];
+            visited.add(key);
+            let jokerCount = 0;
+
+            while (queue.length > 0) {
+              const {row: r, col: c} = queue.shift();
+              group.push({row: r, col: c});
+
+              for (const [dr, dc] of directions) {
+                const nr = r + dr;
+                const nc = c + dc;
+                if (nr >= 0 && nr < VISIBLE_ROWS && nc >= 0 && nc < COLS) {
+                  const nkey = `${nr},${nc}`;
+                  if (!visited.has(nkey)) {
+                    const nsymbol = matrix[nc][nr];
+                    if (nsymbol === symbol || SYMBOL_CONFIG[nsymbol].isJoker) {
+                      visited.add(nkey);
+                      queue.push({row: nr, col: nc});
+                      if (SYMBOL_CONFIG[nsymbol].isJoker) {
+                        jokerCount++;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+
+            if (group.length >= 3) {
+              groups.push({
+                symbol,
+                cells: group,
+                jokerCount
+              });
+            }
+          }
+        }
+      }
+
+      return groups;
+    }
+
     function checkWin(matrix) {
       let totalWin = 0;
       let winDetails = [];
       const winningGroups = [];
       const allCrownCells = [];
-      const allJokerCells = [];
       let crownCount = 0;
-      let jokerCount = 0;
 
-      // 统计皇冠和小丑的位置
       for (let row = 0; row < VISIBLE_ROWS; row++) {
-        for (let col = 0; col < 6; col++) {
+        for (let col = 0; col < COLS; col++) {
           if (matrix[col][row] === '👑') {
             crownCount++;
             allCrownCells.push({ row, col });
           }
-          if (matrix[col][row] === '🃏') {
-            jokerCount++;
-            allJokerCells.push({ row, col });
-          }
         }
       }
 
-      // 按排计算连续相同图案
-      for (let row = 0; row < VISIBLE_ROWS; row++) {
-        let col = 0;
-        while (col < 6) {
-          let baseSymbol = matrix[col][row];
-          let consecutiveCount = 1;
-          let groupJokerCount = 0;
-          
-          // 如果第一个是小丑，需要找最近的非小丑作为基础图案
-          if (SYMBOL_CONFIG[baseSymbol].isJoker) {
-            groupJokerCount++;
-            // 找后面的非小丑图案
-            for (let searchCol = col + 1; searchCol < 6; searchCol++) {
-              if (!SYMBOL_CONFIG[matrix[searchCol][row]].isJoker) {
-                baseSymbol = matrix[searchCol][row];
-                break;
-              }
-            }
-          }
-          
-          // 统计连续匹配的数量（包括小丑）
-          let nextCol = col + 1;
-          while (nextCol < 6) {
-            const nextSymbol = matrix[nextCol][row];
-            if (nextSymbol === baseSymbol || SYMBOL_CONFIG[nextSymbol].isJoker) {
-              consecutiveCount++;
-              if (SYMBOL_CONFIG[nextSymbol].isJoker) {
-                groupJokerCount++;
-              }
-            } else {
-              break;
-            }
-            nextCol++;
-          }
-          
-          // 只有连续3个及以上才有奖励
-          if (consecutiveCount >= 3) {
-            const cfg = SYMBOL_CONFIG[baseSymbol];
-            let multiplier = 0;
-            
-            if (consecutiveCount >= 6) multiplier = cfg.consecutive6;
-            else if (consecutiveCount >= 5) multiplier = cfg.consecutive5;
-            else if (consecutiveCount >= 4) multiplier = cfg.consecutive4;
-            else if (consecutiveCount >= 3) multiplier = cfg.consecutive3;
-            
-            // 每个连接的小丑都让奖励翻倍
-            const jokerMultiplier = Math.pow(2, groupJokerCount);
-            multiplier *= jokerMultiplier;
-            
-            const winAmount = multiplier * currentBet;
-            
-            // 记录获胜组
-            const groupCells = [];
-            for (let i = 0; i < consecutiveCount; i++) {
-              groupCells.push({ row, col: col + i });
-            }
-            
-            winningGroups.push({
-              symbol: baseSymbol,
-              consecutiveCount,
-              groupJokerCount,
-              multiplier,
-              winAmount,
-              cells: groupCells
-            });
-            
-            winDetails.push(`第${row + 1}排 ${baseSymbol}×${consecutiveCount}${groupJokerCount > 0 ? '+🃏×' + groupJokerCount : ''}: ${winAmount}`);
-            totalWin += winAmount;
-          }
-          
-          col += consecutiveCount;
-        }
+      const connectedGroups = findConnectedGroups(matrix);
+
+      for (const group of connectedGroups) {
+        const symbol = group.symbol;
+        const cells = group.cells;
+        const count = cells.length;
+        const jokerCount = group.jokerCount;
+        const cfg = SYMBOL_CONFIG[symbol];
+
+        let multiplier = 0;
+        if (count >= 20) multiplier = cfg.consecutive6 * 4;
+        else if (count >= 10) multiplier = cfg.consecutive6 * 2;
+        else if (count >= 6) multiplier = cfg.consecutive6;
+        else if (count >= 5) multiplier = cfg.consecutive5;
+        else if (count >= 4) multiplier = cfg.consecutive4;
+        else if (count >= 3) multiplier = cfg.consecutive3;
+
+        const jokerMultiplier = Math.pow(2, jokerCount);
+        multiplier *= jokerMultiplier;
+
+        const winAmount = multiplier * currentBet;
+
+        winningGroups.push({
+          symbol,
+          count,
+          jokerCount,
+          multiplier,
+          winAmount,
+          cells
+        });
+
+        winDetails.push(`${symbol}×${count}${jokerCount > 0 ? '+🃏×' + jokerCount : ''}: ${winAmount}`);
+        totalWin += winAmount;
       }
 
-      // 皇冠加成
       const crownMultiplier = Math.pow(2, crownCount);
       if (crownCount > 0) {
         totalWin *= crownMultiplier;
@@ -854,7 +861,7 @@
         document.getElementById('resultText').textContent = `🎉 恭喜中奖! ${winDetails.join(' | ')}`;
         document.getElementById('resultAmount').textContent = `+${totalWin}`;
         document.getElementById('resultAmount').className = 'result-amount win';
-        highlightWinningGroups(winningGroups, allCrownCells, allJokerCells, crownCount, crownMultiplier, totalWin);
+        highlightWinningGroups(winningGroups, allCrownCells, crownCount, crownMultiplier, totalWin);
       } else {
         document.getElementById('resultText').textContent = '😔 未中奖，再接再厉!';
         document.getElementById('resultAmount').textContent = `-${currentBet}`;
@@ -868,48 +875,21 @@
       updateBalance();
     }
 
-    function highlightWinningGroups(groups, crownCells, jokerCells, crownCount, crownMultiplier, totalWin) {
-      let currentRow = -1;
+    function highlightWinningGroups(groups, crownCells, crownCount, crownMultiplier, totalWin) {
       let allCells = [];
       
-      // 按行整理所有单元格
       for (const group of groups) {
-        // 计算组内每个位置的倍数
-        const groupCells = group.cells;
-        let consecutiveMultiplier = 1;
-        let totalInGroup = 0;
-        
-        for (let i = 0; i < groupCells.length; i++) {
-          const cell = groupCells[i];
-          const positionInGroup = i;
-          
-          // 连续的话倍数递增
-          if (positionInGroup > 0) {
-            consecutiveMultiplier *= 2;
-          }
-          
-          // 计算这个图案的奖励
-          const baseReward = SYMBOL_CONFIG[group.symbol].consecutive3 / 3; // 基础份额
-          const cellWin = Math.round(baseReward * consecutiveMultiplier * currentBet);
-          totalInGroup += cellWin;
-          
+        const cellWin = Math.round(group.winAmount / group.cells.length);
+        for (const cell of group.cells) {
           allCells.push({
             ...cell,
             symbol: group.symbol,
-            multiplier: group.multiplier,
-            winAmount: group.winAmount,
-            cellWin: cellWin,
-            groupIndex: groups.indexOf(group),
-            isFirstInGroup: cell.col === groupCells[0].col,
-            isLastInGroup: cell.col === groupCells[groupCells.length - 1].col,
-            consecutiveCount: group.consecutiveCount,
-            groupJokerCount: group.groupJokerCount,
-            positionInGroup: positionInGroup
+            cellWin,
+            groupIndex: groups.indexOf(group)
           });
         }
       }
       
-      // 按行和列排序
       allCells.sort((a, b) => {
         if (a.row !== b.row) return a.row - b.row;
         return a.col - b.col;
@@ -921,38 +901,28 @@
         if (cellIndex < allCells.length) {
           const cell = allCells[cellIndex];
           
-          // 换行时增加延时
-          const isNewRow = cell.row !== currentRow;
-          const delay = isNewRow && cellIndex > 0 ? 600 : 250;
-          currentRow = cell.row;
-          
           setTimeout(() => {
             const reel = document.getElementById(`reel${cell.col}`);
             const symbols = reel.querySelectorAll('.symbol');
             const targetSymbol = symbols[symbols.length - VISIBLE_ROWS + cell.row];
             targetSymbol.classList.add('highlight');
             
+            const container = document.getElementById('reelsContainer');
+            const containerRect = container.getBoundingClientRect();
             const reelRect = reel.getBoundingClientRect();
-            const containerRect = document.getElementById('reelsContainer').getBoundingClientRect();
             const x = reelRect.left - containerRect.left + reelRect.width / 2;
-            const y = reelRect.top - containerRect.top + cell.row * 80;
+            const y = reelRect.top - containerRect.top + cell.row * 80 + 40;
             
-            // 每个图案都显示奖励文字
-            let floatText = `+${cell.cellWin}`;
-            let floatClass = '';
+            showFloatingText(`+${cell.cellWin}`, x, y, '');
             
-            showFloatingText(floatText, x, y, floatClass);
-            
-            // 一段时间后恢复非高亮状态
             setTimeout(() => {
               targetSymbol.classList.remove('highlight');
             }, 1500);
             
             cellIndex++;
             highlightNext();
-          }, delay);
+          }, 200);
         } else {
-          // 高亮所有皇冠
           let crownIndex = 0;
           function highlightNextCrown() {
             if (crownIndex < crownCells.length) {
@@ -963,10 +933,11 @@
                 const targetSymbol = symbols[symbols.length - VISIBLE_ROWS + cell.row];
                 targetSymbol.classList.add('highlight');
                 
+                const container = document.getElementById('reelsContainer');
+                const containerRect = container.getBoundingClientRect();
                 const reelRect = reel.getBoundingClientRect();
-                const containerRect = document.getElementById('reelsContainer').getBoundingClientRect();
                 const x = reelRect.left - containerRect.left + reelRect.width / 2;
-                const y = reelRect.top - containerRect.top + cell.row * 80;
+                const y = reelRect.top - containerRect.top + cell.row * 80 + 40;
                 
                 showFloatingText('👑', x, y, 'crown');
                 
@@ -976,29 +947,28 @@
                 
                 crownIndex++;
                 highlightNextCrown();
-              }, 200);
+              }, 150);
             } else if (crownMultiplier > 1) {
-              // 显示皇冠加成
               setTimeout(() => {
                 const container = document.getElementById('reelsContainer');
                 const x = container.offsetWidth / 2;
                 const y = container.offsetHeight / 2;
                 showFloatingText(`皇冠 ×${crownMultiplier}`, x, y, 'crown');
-              }, 300);
+              }, 200);
               
               setTimeout(() => {
                 isSpinning = false;
                 document.getElementById('spinBtn').disabled = false;
                 document.getElementById('betMinus').disabled = false;
                 document.getElementById('betPlus').disabled = false;
-              }, 4000);
+              }, 3000);
             } else {
               setTimeout(() => {
                 isSpinning = false;
                 document.getElementById('spinBtn').disabled = false;
                 document.getElementById('betMinus').disabled = false;
                 document.getElementById('betPlus').disabled = false;
-              }, 3000);
+              }, 2000);
             }
           }
           
@@ -1020,7 +990,7 @@
       
       setTimeout(() => {
         floatText.remove();
-      }, 1500);
+      }, 2000);
     }
 
     function updateBalance() {
