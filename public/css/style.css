@@ -168,6 +168,17 @@ h1 {
     0 0 30px #ffd700;
 }
 
+.floating-text.group-total {
+  color: #00ff88;
+  font-size: 2.5rem;
+  font-weight: 900;
+  text-shadow: 
+    0 0 5px #000,
+    0 0 15px #00ff88, 
+    0 0 25px #00ff88, 
+    0 0 35px #00ff88;
+}
+
 @keyframes floatUp {
   0% {
     opacity: 0;

@@ -132,8 +132,15 @@ export function analyzeWinningMatrix(matrix) {
         
         const winAmount = multiplier * gameState.currentBet;
         
-        // 转换格式
-        const groupCells = component.map(c => ({ col: c.col, row: c.row }));
+        // 转换格式并按从左到右排序
+        const groupCells = component
+          .map(c => ({ col: c.col, row: c.row }))
+          .sort((a, b) => {
+            // 先按列（左到右）
+            if (a.col !== b.col) return a.col - b.col;
+            // 再按行（上到下）
+            return a.row - b.row;
+          });
         
         winningGroups.push({
           symbol: baseSymbol,

@@ -60,37 +60,15 @@ export function showFloatingText(text, x, y, extraClass = '') {
   }, 1500);
 }
 
-// 高亮中奖符号并显示奖励 - 简化版奖励计算
+// 高亮中奖符号并显示奖励 - 逐组高亮并显示奖励总和
 export function highlightWinningSymbols(winningGroups, allCrownCells, crownCount, crownMultiplier) {
-  let allCells = [];
-  
-  // 整理所有单元格并计算每个符号的奖励
-  for (const group of winningGroups) {
-    const totalWinPerCell = Math.round(group.winAmount / group.cells.length);
-    for (let i = 0; i < group.cells.length; i++) {
-      const cell = group.cells[i];
-      allCells.push({
-        ...cell,
-        symbol: group.symbol,
-        cellWin: totalWinPerCell,
-        groupIndex: winningGroups.indexOf(group)
-      });
-    }
-  }
-  
-  // 按行和列排序，让显示更有序
-  allCells.sort((a, b) => {
-    if (a.row !== b.row) return a.row - b.row;
-    return a.col - b.col;
-  });
-  
-  let cellIndex = 0;
-  let currentRow = -1;
+  // 按组依次高亮
+  let groupIndex = 0;
   
   return new Promise((resolve) => {
-    function highlightNext() {
-      if (cellIndex >= allCells.length) {
-        // 所有符号高亮完成，现在处理皇冠
+    function highlightGroup() {
+      if (groupIndex >= winningGroups.length) {
+        // 所有组高亮完成，现在处理皇冠
         let crownIndex = 0;
         function highlightNextCrown() {
           if (crownIndex < allCrownCells.length) {
@@ -113,22 +91,22 @@ export function highlightWinningSymbols(winningGroups, allCrownCells, crownCount
                 
                 setTimeout(() => {
                   targetSymbol.classList.remove('highlight');
-                }, 1500);
+                }, 1200);
               }
               
               crownIndex++;
               highlightNextCrown();
-            }, 200);
+            }, 150);
           } else if (crownMultiplier > 1) {
             setTimeout(() => {
               const container = document.getElementById('reelsContainer');
               const x = container.offsetWidth / 2;
               const y = container.offsetHeight / 2;
-              showFloatingText(`皇冠 ×${crownMultiplier}`, x, y, 'crown');
-            }, 300);
-            setTimeout(resolve, 4000);
-          } else {
+              showFloatingText(`皇冠加成 ×${crownMultiplier}`, x, y, 'crown');
+            }, 200);
             setTimeout(resolve, 3000);
+          } else {
+            setTimeout(resolve, 2000);
           }
         }
         
@@ -136,12 +114,34 @@ export function highlightWinningSymbols(winningGroups, allCrownCells, crownCount
         return;
       }
       
-      const cell = allCells[cellIndex];
-      const isNewRow = cell.row !== currentRow;
-      const delay = isNewRow && cellIndex > 0 ? 600 : 250;
-      currentRow = cell.row;
+      const group = winningGroups[groupIndex];
+      let cellIndex = 0;
       
-      setTimeout(() => {
+      function highlightCell() {
+        if (cellIndex >= group.cells.length) {
+          // 该组所有符号高亮完成，停顿并显示奖励总和
+          setTimeout(() => {
+            // 在该组中间位置显示奖励总和
+            const midCell = group.cells[Math.floor(group.cells.length / 2)];
+            const reel = document.getElementById(`reel${midCell.col}`);
+            const container = document.getElementById('reelsContainer');
+            const containerRect = container.getBoundingClientRect();
+            const reelRect = reel.getBoundingClientRect();
+            const x = reelRect.left - containerRect.left + reelRect.width / 2;
+            const y = reelRect.top - containerRect.top + midCell.row * 80;
+            
+            showFloatingText(`+${group.winAmount}`, x, y, 'group-total');
+            
+            // 停顿1.5秒后继续下一组
+            setTimeout(() => {
+              groupIndex++;
+              highlightGroup();
+            }, 1500);
+          }, 300);
+          return;
+        }
+        
+        const cell = group.cells[cellIndex];
         const reel = document.getElementById(`reel${cell.col}`);
         const symbols = reel.querySelectorAll('.symbol');
         const targetIndex = symbols.length - GAME_CONSTANTS.VISIBLE_ROWS + cell.row;
@@ -150,29 +150,32 @@ export function highlightWinningSymbols(winningGroups, allCrownCells, crownCount
         if (targetSymbol) {
           targetSymbol.classList.add('highlight');
           
-          // 计算位置 - 确保正确获取到 reel 和 container
+          // 每个符号高亮时显示贡献的奖励
+          const cellWin = Math.round(group.winAmount / group.cells.length);
           const container = document.getElementById('reelsContainer');
           const containerRect = container.getBoundingClientRect();
           const reelRect = reel.getBoundingClientRect();
-          
           const x = reelRect.left - containerRect.left + reelRect.width / 2;
           const y = reelRect.top - containerRect.top + cell.row * 80;
           
-          // 显示该图案贡献的奖励
-          showFloatingText(`+${cell.cellWin}`, x, y, '');
+          showFloatingText(`+${cellWin}`, x, y, '');
           
-          // 一段时间后恢复非高亮状态
+          // 高亮0.5秒后移除
           setTimeout(() => {
             targetSymbol.classList.remove('highlight');
-          }, 1500);
+          }, 500);
         }
         
         cellIndex++;
-        highlightNext();
-      }, delay);
+        
+        // 每个符号间隔150ms
+        setTimeout(highlightCell, 150);
+      }
+      
+      highlightCell();
     }
     
-    highlightNext();
+    highlightGroup();
   });
 }
 
