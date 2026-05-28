@@ -143,13 +143,14 @@
 
     .floating-text {
       position: absolute;
-      font-size: 1rem;
+      font-size: 1.5rem;
       font-weight: bold;
       color: #00ff88;
-      text-shadow: 0 0 10px #00ff88;
-      animation: floatUp 1s ease-out forwards;
+      text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 30px #00ff88;
+      animation: floatUp 1.5s ease-out forwards;
       pointer-events: none;
       z-index: 100;
+      white-space: nowrap;
     }
 
     .floating-text.joker {
@@ -164,12 +165,16 @@
 
     @keyframes floatUp {
       0% {
+        opacity: 0;
+        transform: translate(-50%, 0) scale(0.5);
+      }
+      20% {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translate(-50%, -10px) scale(1.2);
       }
       100% {
         opacity: 0;
-        transform: translateY(-50px) scale(1.5);
+        transform: translate(-50%, -60px) scale(1);
       }
     }
 
@@ -869,17 +874,37 @@
       
       // 按行整理所有单元格
       for (const group of groups) {
-        for (const cell of group.cells) {
+        // 计算组内每个位置的倍数
+        const groupCells = group.cells;
+        let consecutiveMultiplier = 1;
+        let totalInGroup = 0;
+        
+        for (let i = 0; i < groupCells.length; i++) {
+          const cell = groupCells[i];
+          const positionInGroup = i;
+          
+          // 连续的话倍数递增
+          if (positionInGroup > 0) {
+            consecutiveMultiplier *= 2;
+          }
+          
+          // 计算这个图案的奖励
+          const baseReward = SYMBOL_CONFIG[group.symbol].consecutive3 / 3; // 基础份额
+          const cellWin = Math.round(baseReward * consecutiveMultiplier * currentBet);
+          totalInGroup += cellWin;
+          
           allCells.push({
             ...cell,
             symbol: group.symbol,
             multiplier: group.multiplier,
             winAmount: group.winAmount,
+            cellWin: cellWin,
             groupIndex: groups.indexOf(group),
-            isFirstInGroup: cell.col === group.cells[0].col,
-            isLastInGroup: cell.col === group.cells[group.cells.length - 1].col,
+            isFirstInGroup: cell.col === groupCells[0].col,
+            isLastInGroup: cell.col === groupCells[groupCells.length - 1].col,
             consecutiveCount: group.consecutiveCount,
-            groupJokerCount: group.groupJokerCount
+            groupJokerCount: group.groupJokerCount,
+            positionInGroup: positionInGroup
           });
         }
       }
@@ -912,19 +937,11 @@
             const x = reelRect.left - containerRect.left + reelRect.width / 2;
             const y = reelRect.top - containerRect.top + cell.row * 80;
             
-            // 显示浮动文字
-            let floatText = '';
+            // 每个图案都显示奖励文字
+            let floatText = `+${cell.cellWin}`;
             let floatClass = '';
             
-            if (cell.isFirstInGroup) {
-              floatText = `×${cell.consecutiveCount}`;
-            } else if (cell.isLastInGroup) {
-              floatText = `+${cell.winAmount}`;
-            }
-            
-            if (floatText) {
-              showFloatingText(floatText, x, y, floatClass);
-            }
+            showFloatingText(floatText, x, y, floatClass);
             
             // 一段时间后恢复非高亮状态
             setTimeout(() => {
@@ -999,7 +1016,6 @@
       floatText.textContent = text;
       floatText.style.left = `${x}px`;
       floatText.style.top = `${y}px`;
-      floatText.style.transform = 'translate(-50%, -50%)';
       container.appendChild(floatText);
       
       setTimeout(() => {
