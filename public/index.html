@@ -64,7 +64,6 @@
     .reel-content {
       position: absolute;
       width: 100%;
-      transition: transform 0.1s linear;
     }
 
     .symbol {
@@ -76,10 +75,25 @@
       font-size: 2.5rem;
       background: rgba(0, 0, 0, 0.3);
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s;
     }
 
     .symbol.reward {
       background: linear-gradient(135deg, #ffd700 0%, #ff6b6b 100%);
+    }
+
+    .symbol.highlight {
+      animation: highlight 0.5s ease-in-out;
+      box-shadow: 0 0 30px #00ff88, 0 0 60px #00ff88;
+      background: rgba(0, 255, 136, 0.5);
+      transform: scale(1.1);
+      z-index: 10;
+    }
+
+    @keyframes highlight {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.2); }
+      100% { transform: scale(1.1); }
     }
 
     .control-panel {
@@ -106,11 +120,12 @@
     .bet-selector {
       display: flex;
       gap: 10px;
+      align-items: center;
     }
 
     .bet-btn {
       padding: 10px 20px;
-      font-size: 1.2rem;
+      font-size: 1.5rem;
       border: none;
       border-radius: 10px;
       cursor: pointer;
@@ -118,6 +133,7 @@
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
       font-weight: bold;
+      min-width: 50px;
     }
 
     .bet-btn:hover {
@@ -125,9 +141,21 @@
       box-shadow: 0 0 20px rgba(102, 126, 234, 0.5);
     }
 
-    .bet-btn.active {
-      background: linear-gradient(135deg, #ffd700 0%, #ff6b6b 100%);
-      color: #1a1a2e;
+    .bet-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .bet-display {
+      padding: 10px 30px;
+      font-size: 1.5rem;
+      font-weight: bold;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      border: 2px solid #ffd700;
+      color: #ffd700;
+      min-width: 120px;
+      text-align: center;
     }
 
     .spin-btn {
@@ -206,25 +234,36 @@
       color: #ffd700;
     }
 
-    .paytable {
-      width: 100%;
-      border-collapse: collapse;
+    .win-pool {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
       margin-bottom: 20px;
     }
 
-    .paytable th, .paytable td {
-      padding: 12px;
-      text-align: center;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    .win-item {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 15px;
+      border-radius: 10px;
+      border: 2px solid rgba(255, 215, 0, 0.3);
+      transition: all 0.3s;
     }
 
-    .paytable th {
-      background: rgba(255, 215, 0, 0.2);
-      color: #ffd700;
+    .win-item:hover {
+      border-color: #ffd700;
+      transform: scale(1.02);
     }
 
-    .paytable tr:hover {
-      background: rgba(255, 255, 255, 0.1);
+    .win-pattern {
+      font-size: 1.5rem;
+      margin-bottom: 10px;
+      letter-spacing: 5px;
+    }
+
+    .win-reward {
+      font-size: 1.2rem;
+      color: #00ff88;
+      font-weight: bold;
     }
 
     .config-grid {
@@ -329,8 +368,8 @@
         gap: 10px;
       }
 
-      .paytable {
-        font-size: 0.8rem;
+      .win-pool {
+        grid-template-columns: 1fr;
       }
     }
   </style>
@@ -353,11 +392,9 @@
         <div class="bet-section">
           <label>选择投注金额</label>
           <div class="bet-selector">
-            <button class="bet-btn active" data-bet="1">1</button>
-            <button class="bet-btn" data-bet="5">5</button>
-            <button class="bet-btn" data-bet="10">10</button>
-            <button class="bet-btn" data-bet="50">50</button>
-            <button class="bet-btn" data-bet="100">100</button>
+            <button class="bet-btn" id="betMinus">-</button>
+            <div class="bet-display" id="betDisplay">100</div>
+            <button class="bet-btn" id="betPlus">+</button>
           </div>
         </div>
 
@@ -366,8 +403,8 @@
         <div class="balance-section">
           <label>账户信息</label>
           <div class="balance-info">
-            <span>金币: <span id="balance">1000</span></span>
-            <span>当前投注: <span id="currentBet">1</span></span>
+            <span>金币: <span id="balance">10000</span></span>
+            <span>当前投注: <span id="currentBet">100</span></span>
           </div>
         </div>
       </div>
@@ -379,136 +416,16 @@
     </div>
 
     <div class="rules-section">
-      <h2>📖 游戏规则与奖励说明</h2>
+      <h2>🎯 中奖池</h2>
       
-      <table class="paytable">
-        <thead>
-          <tr>
-            <th>图案组合</th>
-            <th>图案</th>
-            <th>匹配数量</th>
-            <th>奖励倍数</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>金币奖励</td>
-            <td>💰</td>
-            <td>3/4/5/6</td>
-            <td>10x / 50x / 200x / 1000x</td>
-          </tr>
-          <tr>
-            <td>钻石奖励</td>
-            <td>💎</td>
-            <td>3/4/5/6</td>
-            <td>5x / 25x / 100x / 500x</td>
-          </tr>
-          <tr>
-            <td>皇冠奖励</td>
-            <td>👑</td>
-            <td>3/4/5/6</td>
-            <td>4x / 20x / 80x / 400x</td>
-          </tr>
-          <tr>
-            <td>星星奖励</td>
-            <td>⭐</td>
-            <td>3/4/5/6</td>
-            <td>3x / 15x / 60x / 300x</td>
-          </tr>
-          <tr>
-            <td>爱心奖励</td>
-            <td>❤️</td>
-            <td>3/4/5/6</td>
-            <td>2x / 10x / 40x / 200x</td>
-          </tr>
-          <tr>
-            <td>幸运7</td>
-            <td>🍀</td>
-            <td>3/4/5/6</td>
-            <td>1x / 5x / 20x / 100x</td>
-          </tr>
-          <tr>
-            <td>红色樱桃</td>
-            <td>🍒</td>
-            <td>3/4/5/6</td>
-            <td>1x / 4x / 15x / 80x</td>
-          </tr>
-          <tr>
-            <td>金色铃铛</td>
-            <td>🔔</td>
-            <td>3/4/5/6</td>
-            <td>1x / 3x / 10x / 50x</td>
-          </tr>
-          <tr>
-            <td>红色7</td>
-            <td>🔴</td>
-            <td>3/4/5/6</td>
-            <td>0.5x / 2x / 8x / 40x</td>
-          </tr>
-          <tr>
-            <td>柠檬</td>
-            <td>🍋</td>
-            <td>3/4/5/6</td>
-            <td>0.5x / 2x / 6x / 30x</td>
-          </tr>
-          <tr>
-            <td>橙子</td>
-            <td>🍊</td>
-            <td>3/4/5/6</td>
-            <td>0.5x / 2x / 5x / 25x</td>
-          </tr>
-          <tr>
-            <td>葡萄</td>
-            <td>🍇</td>
-            <td>3/4/5/6</td>
-            <td>0.5x / 1x / 4x / 20x</td>
-          </tr>
-          <tr>
-            <td>西瓜</td>
-            <td>🍉</td>
-            <td>3/4/5/6</td>
-            <td>0.5x / 1x / 3x / 15x</td>
-          </tr>
-          <tr>
-            <td>条纹</td>
-            <td>🔷</td>
-            <td>3/4/5/6</td>
-            <td>0.5x / 1x / 2x / 10x</td>
-          </tr>
-          <tr>
-            <td>BAR</td>
-            <td>🔶</td>
-            <td>3/4/5/6</td>
-            <td>0.5x / 1x / 2x / 8x</td>
-          </tr>
-          <tr>
-            <td>双BAR</td>
-            <td>🔸</td>
-            <td>3/4/5/6</td>
-            <td>0.5x / 1x / 2x / 5x</td>
-          </tr>
-          <tr>
-            <td>三BAR</td>
-            <td>🟠</td>
-            <td>3/4/5/6</td>
-            <td>0.5x / 1x / 2x / 3x</td>
-          </tr>
-          <tr>
-            <td>JOKER</td>
-            <td>🃏</td>
-            <td>任意3个以上</td>
-            <td>百搭符，可代替任何图案</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="win-pool" id="winPool"></div>
 
       <p style="color: #ffd700; font-weight: bold; margin-top: 20px;">🎲 游戏说明：</p>
       <ul style="margin-left: 20px; line-height: 1.8; color: #ccc;">
         <li>选择投注金额后点击 SPIN 按钮开始转动</li>
-        <li>6个转盘会依次停止，从左到右形成图案组合</li>
-        <li>相同图案在水平线上连续出现3个或以上即可获得奖励</li>
-        <li>JOKER 是百搭符，可以代替任何其他图案形成组合</li>
-        <li>奖励倍数乘以投注金额即为赢得的金币</li>
+        <li>6个转盘会依次滚动停止，从左到右形成图案组合</li>
+        <li>只有当6个图案完全匹配中奖池中的任意一个组合才能获得奖励</li>
+        <li>中奖后，图案会逐个亮起显示</li>
       </ul>
     </div>
 
@@ -526,65 +443,6 @@
         </div>
 
         <div class="config-item">
-          <label>Volatility (波动率)</label>
-          <input type="number" id="volatility" min="1" max="10" step="0.5" value="5">
-          <div class="description">
-            <strong>说明:</strong> 衡量奖金分布的风险程度。1=低波动(频繁小赢)，10=高波动(稀有大赢)。<br>
-            <strong>影响:</strong> 高波动游戏可能长时间不中奖，但中奖金额巨大。
-          </div>
-        </div>
-
-        <div class="config-item">
-          <label>Hit Frequency (命中率)</label>
-          <input type="number" id="hitFrequency" min="5" max="50" step="1" value="25">
-          <div class="description">
-            <strong>公式:</strong> Hit Frequency = (中奖次数 / 总旋转次数) × 100<br>
-            <strong>说明:</strong> 表示每100次旋转中，平均有多少次会出现中奖组合。典型范围20-35%。
-          </div>
-        </div>
-
-        <div class="config-item">
-          <label>最大奖金倍数</label>
-          <input type="number" id="maxMultiplier" min="100" max="10000" step="100" value="1000">
-          <div class="description">
-            <strong>说明:</strong> 单次旋转可获得的最高奖金倍数。<br>
-            <strong>行业标准:</strong> 普通slot为1000x-5000x，高波动游戏可达10000x+。
-          </div>
-        </div>
-
-        <div class="config-item">
-          <label>基础图案权重</label>
-          <input type="number" id="baseWeight" min="1" max="100" step="1" value="50">
-          <div class="description">
-            <strong>说明:</strong> 控制基础图案(低奖励)在转盘中出现的概率权重。数值越高，基础图案越容易出现。
-          </div>
-        </div>
-
-        <div class="config-item">
-          <label>奖励图案权重</label>
-          <input type="number" id="rewardWeight" min="1" max="50" step="1" value="10">
-          <div class="description">
-            <strong>说明:</strong> 控制奖励图案(高奖励)在转盘中出现的概率权重。数值越高，奖励图案越容易出现。
-          </div>
-        </div>
-
-        <div class="config-item">
-          <label>JOKER权重</label>
-          <input type="number" id="jokerWeight" min="1" max="20" step="1" value="5">
-          <div class="description">
-            <strong>说明:</strong> JOKER百搭符的出现概率权重。JOKER可代替任何图案形成中奖组合。
-          </div>
-        </div>
-
-        <div class="config-item">
-          <label>赔付比例系数</label>
-          <input type="number" id="payoutFactor" min="0.5" max="2" step="0.1" value="1">
-          <div class="description">
-            <strong>说明:</strong> 调整所有奖励倍数的系数。小于1降低整体赔付，大于1增加整体赔付。
-          </div>
-        </div>
-
-        <div class="config-item">
           <label>House Edge (庄家优势)</label>
           <input type="number" id="houseEdge" min="1" max="20" step="0.1" value="5">
           <div class="description">
@@ -598,80 +456,68 @@
       
       <div class="config-summary" id="configSummary">
         <h3 style="color: #00ff88; margin-bottom: 10px;">✅ 配置已应用!</h3>
-        <p>当前配置: RTP=<span id="summaryRtp">95%</span>, 波动率=<span id="summaryVol">5</span>, 命中率=<span id="summaryHit">25%</span>, 最大倍数=<span id="summaryMax">1000x</span></p>
+        <p>当前配置: RTP=<span id="summaryRtp">95%</span>, 庄家优势=<span id="summaryHouseEdge">5%</span></p>
       </div>
     </div>
   </div>
 
   <script>
-    const SYMBOLS = {
-      base: ['🔷', '🔶', '🔸', '🟠', '🍉', '🍇', '🍊', '🍋', '🔴'],
-      reward: ['💰', '💎', '👑', '⭐', '❤️', '🍀'],
-      joker: '🃏'
-    };
+    const SYMBOLS = ['💰', '💎', '👑', '⭐', '❤️', '🍀', '🍒', '🔔', '🟠', '🔶'];
 
-    const PAYTABLE = {
-      '💰': [0, 0, 10, 50, 200, 1000],
-      '💎': [0, 0, 5, 25, 100, 500],
-      '👑': [0, 0, 4, 20, 80, 400],
-      '⭐': [0, 0, 3, 15, 60, 300],
-      '❤️': [0, 0, 2, 10, 40, 200],
-      '🍀': [0, 0, 1, 5, 20, 100],
-      '🍒': [0, 0, 1, 4, 15, 80],
-      '🔔': [0, 0, 1, 3, 10, 50],
-      '🔴': [0, 0, 0.5, 2, 8, 40],
-      '🍋': [0, 0, 0.5, 2, 6, 30],
-      '🍊': [0, 0, 0.5, 2, 5, 25],
-      '🍇': [0, 0, 0.5, 1, 4, 20],
-      '🍉': [0, 0, 0.5, 1, 3, 15],
-      '🔷': [0, 0, 0.5, 1, 2, 10],
-      '🔶': [0, 0, 0.5, 1, 2, 8],
-      '🔸': [0, 0, 0.5, 1, 2, 5],
-      '🟠': [0, 0, 0.5, 1, 2, 3]
-    };
+    const WIN_POOL = [
+      { pattern: ['💰', '💰', '💰', '💰', '💰', '💰'], reward: 10000 },
+      { pattern: ['💎', '💎', '💎', '💎', '💎', '💎'], reward: 5000 },
+      { pattern: ['👑', '👑', '👑', '👑', '👑', '👑'], reward: 3000 },
+      { pattern: ['⭐', '⭐', '⭐', '⭐', '⭐', '⭐'], reward: 2000 },
+      { pattern: ['❤️', '❤️', '❤️', '❤️', '❤️', '❤️'], reward: 1500 },
+      { pattern: ['🍀', '🍀', '🍀', '🍀', '🍀', '🍀'], reward: 1000 },
+      { pattern: ['🍒', '🍒', '🍒', '🍒', '🍒', '🍒'], reward: 800 },
+      { pattern: ['🔔', '🔔', '🔔', '🔔', '🔔', '🔔'], reward: 600 },
+      { pattern: ['🟠', '🟠', '🟠', '🟠', '🟠', '🟠'], reward: 400 },
+      { pattern: ['🔶', '🔶', '🔶', '🔶', '🔶', '🔶'], reward: 200 },
+      { pattern: ['💰', '💰', '💰', '💰', '💰', '💎'], reward: 500 },
+      { pattern: ['💎', '💎', '💎', '💎', '💎', '👑'], reward: 300 },
+      { pattern: ['👑', '👑', '👑', '👑', '⭐', '⭐'], reward: 200 },
+      { pattern: ['❤️', '❤️', '❤️', '🍀', '🍀', '🍀'], reward: 150 },
+      { pattern: ['🍒', '🍒', '🔔', '🔔', '🟠', '🟠'], reward: 100 },
+      { pattern: ['💰', '💎', '👑', '⭐', '❤️', '🍀'], reward: 50 }
+    ];
 
     let config = {
       rtp: 95.0,
-      volatility: 5,
-      hitFrequency: 25,
-      maxMultiplier: 1000,
-      baseWeight: 50,
-      rewardWeight: 10,
-      jokerWeight: 5,
-      payoutFactor: 1,
       houseEdge: 5
     };
 
-    let balance = 1000;
-    let currentBet = 1;
+    let balance = 10000;
+    let currentBet = 100;
     let isSpinning = false;
-    let reelContents = [];
+    const SYMBOLS_PER_REEL = 20;
+
+    function initWinPool() {
+      const poolContainer = document.getElementById('winPool');
+      poolContainer.innerHTML = WIN_POOL.map(win => `
+        <div class="win-item">
+          <div class="win-pattern">${win.pattern.join(' ')}</div>
+          <div class="win-reward">+${win.reward}x</div>
+        </div>
+      `).join('');
+    }
 
     function initReels() {
       for (let i = 0; i < 6; i++) {
         const reel = document.getElementById(`reel${i}`);
         let content = '';
-        for (let j = 0; j < 20; j++) {
+        for (let j = 0; j < SYMBOLS_PER_REEL; j++) {
           const symbol = getRandomSymbol();
-          const isReward = SYMBOLS.reward.includes(symbol);
-          content += `<div class="symbol ${isReward ? 'reward' : ''}">${symbol}</div>`;
+          content += `<div class="symbol">${symbol}</div>`;
         }
         reel.innerHTML = content;
-        reelContents.push(reel.innerHTML);
+        reel.style.transform = 'translateY(0)';
       }
     }
 
     function getRandomSymbol() {
-      const totalWeight = config.baseWeight + config.rewardWeight + config.jokerWeight;
-      const rand = Math.random() * totalWeight;
-      
-      if (rand < config.jokerWeight) {
-        return SYMBOLS.joker;
-      } else if (rand < config.jokerWeight + config.rewardWeight) {
-        return SYMBOLS.reward[Math.floor(Math.random() * SYMBOLS.reward.length)];
-      } else {
-        return SYMBOLS.base[Math.floor(Math.random() * SYMBOLS.base.length)];
-      }
+      return SYMBOLS[Math.floor(Math.random() * SYMBOLS.length)];
     }
 
     function spinReels() {
@@ -679,6 +525,8 @@
       
       isSpinning = true;
       document.getElementById('spinBtn').disabled = true;
+      document.getElementById('betMinus').disabled = true;
+      document.getElementById('betPlus').disabled = true;
       balance -= currentBet;
       updateBalance();
       
@@ -692,129 +540,142 @@
             if (resultSymbols.length === 6) {
               setTimeout(() => {
                 checkWin(resultSymbols);
-                isSpinning = false;
-                document.getElementById('spinBtn').disabled = false;
-              }, 500);
+              }, 300);
             }
           });
         }, delay);
-        delay += 300;
+        delay += 400;
       }
     }
 
     function animateReel(reelIndex, callback) {
       const reel = document.getElementById(`reel${reelIndex}`);
-      const spinCount = 15 + Math.floor(Math.random() * 10);
-      let currentCount = 0;
+      const finalSymbol = getRandomSymbol();
       
-      const spin = () => {
-        if (currentCount >= spinCount) {
-          const finalSymbol = getRandomSymbol();
-          const isReward = SYMBOLS.reward.includes(finalSymbol);
-          reel.innerHTML = `<div class="symbol ${isReward ? 'reward' : ''}">${finalSymbol}</div>`;
+      let content = '';
+      for (let j = 0; j < SYMBOLS_PER_REEL; j++) {
+        const symbol = j === SYMBOLS_PER_REEL - 4 ? finalSymbol : getRandomSymbol();
+        content += `<div class="symbol">${symbol}</div>`;
+      }
+      reel.innerHTML = content;
+      
+      let currentY = 0;
+      const spinDuration = 1500 + reelIndex * 200;
+      const startTime = Date.now();
+      
+      function animate() {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / spinDuration, 1);
+        
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const targetY = -(SYMBOLS_PER_REEL - 4) * 80;
+        currentY = easeOut * targetY;
+        
+        reel.style.transform = `translateY(${currentY}px)`;
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
           callback(finalSymbol);
-          return;
         }
-        
-        const symbol = getRandomSymbol();
-        const isReward = SYMBOLS.reward.includes(symbol);
-        reel.innerHTML = `<div class="symbol ${isReward ? 'reward' : ''}">${symbol}</div>`;
-        currentCount++;
-        
-        setTimeout(spin, 80);
-      };
+      }
       
-      spin();
+      animate();
     }
 
     function checkWin(symbols) {
       let totalWin = 0;
-      let winDetails = [];
+      let winningPattern = null;
 
-      for (let startCol = 0; startCol <= 3; startCol++) {
-        const matched = findLongestMatch(symbols.slice(startCol));
-        if (matched.length >= 3) {
-          const baseSymbol = matched.filter(s => s !== '🃏')[0] || matched[0];
-          if (PAYTABLE[baseSymbol]) {
-            const multiplier = PAYTABLE[baseSymbol][matched.length - 1] || 0;
-            const winAmount = Math.round(multiplier * currentBet * config.payoutFactor);
-            totalWin += winAmount;
-            if (winAmount > 0) {
-              winDetails.push(`${baseSymbol} × ${matched.length} = ${winAmount}`);
-            }
+      for (const win of WIN_POOL) {
+        let match = true;
+        for (let i = 0; i < 6; i++) {
+          if (symbols[i] !== win.pattern[i]) {
+            match = false;
+            break;
           }
+        }
+        if (match) {
+          totalWin = win.reward * currentBet;
+          winningPattern = win.pattern;
+          break;
         }
       }
 
       if (totalWin > 0) {
         balance += totalWin;
-        document.getElementById('resultText').textContent = `🎉 恭喜中奖! ${winDetails.join(' + ')}`;
+        document.getElementById('resultText').textContent = '🎉 恭喜中奖!';
         document.getElementById('resultAmount').textContent = `+${totalWin}`;
         document.getElementById('resultAmount').className = 'result-amount win';
+        highlightSymbols(winningPattern);
       } else {
         document.getElementById('resultText').textContent = '😔 未中奖，再接再厉!';
         document.getElementById('resultAmount').textContent = `-${currentBet}`;
         document.getElementById('resultAmount').className = 'result-amount lose';
+        isSpinning = false;
+        document.getElementById('spinBtn').disabled = false;
+        document.getElementById('betMinus').disabled = false;
+        document.getElementById('betPlus').disabled = false;
       }
       
       updateBalance();
     }
 
-    function findLongestMatch(symbols) {
-      if (symbols.length === 0) return [];
+    function highlightSymbols(pattern) {
+      let highlightIndex = 0;
       
-      const match = [symbols[0]];
-      for (let i = 1; i < symbols.length; i++) {
-        if (symbols[i] === match[0] || symbols[i] === '🃏' || match[0] === '🃏') {
-          if (match[0] === '🃏' && symbols[i] !== '🃏') {
-            match[0] = symbols[i];
-          }
-          match.push(symbols[i]);
+      function highlightNext() {
+        if (highlightIndex < 6) {
+          const reel = document.getElementById(`reel${highlightIndex}`);
+          const symbols = reel.querySelectorAll('.symbol');
+          const targetSymbol = symbols[symbols.length - 4];
+          targetSymbol.classList.add('highlight');
+          
+          highlightIndex++;
+          setTimeout(highlightNext, 300);
         } else {
-          break;
+          setTimeout(() => {
+            isSpinning = false;
+            document.getElementById('spinBtn').disabled = false;
+            document.getElementById('betMinus').disabled = false;
+            document.getElementById('betPlus').disabled = false;
+          }, 1000);
         }
       }
       
-      return match;
+      highlightNext();
     }
 
     function updateBalance() {
       document.getElementById('balance').textContent = balance;
       document.getElementById('currentBet').textContent = currentBet;
+      document.getElementById('betDisplay').textContent = currentBet;
+    }
+
+    function adjustBet(delta) {
+      const newBet = currentBet + delta;
+      if (newBet >= 100 && newBet <= 10000) {
+        currentBet = newBet;
+        updateBalance();
+      }
     }
 
     function applyConfig() {
       config.rtp = parseFloat(document.getElementById('rtp').value);
-      config.volatility = parseFloat(document.getElementById('volatility').value);
-      config.hitFrequency = parseFloat(document.getElementById('hitFrequency').value);
-      config.maxMultiplier = parseFloat(document.getElementById('maxMultiplier').value);
-      config.baseWeight = parseFloat(document.getElementById('baseWeight').value);
-      config.rewardWeight = parseFloat(document.getElementById('rewardWeight').value);
-      config.jokerWeight = parseFloat(document.getElementById('jokerWeight').value);
-      config.payoutFactor = parseFloat(document.getElementById('payoutFactor').value);
       config.houseEdge = parseFloat(document.getElementById('houseEdge').value);
 
       document.getElementById('houseEdge').value = (100 - config.rtp).toFixed(1);
 
       document.getElementById('summaryRtp').textContent = `${config.rtp}%`;
-      document.getElementById('summaryVol').textContent = config.volatility;
-      document.getElementById('summaryHit').textContent = `${config.hitFrequency}%`;
-      document.getElementById('summaryMax').textContent = `${config.maxMultiplier}x`;
+      document.getElementById('summaryHouseEdge').textContent = `${config.houseEdge}%`;
       
       const summary = document.getElementById('configSummary');
       summary.classList.add('show');
       setTimeout(() => summary.classList.remove('show'), 3000);
     }
 
-    document.querySelectorAll('.bet-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.bet-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentBet = parseInt(btn.dataset.bet);
-        updateBalance();
-      });
-    });
-
+    document.getElementById('betMinus').addEventListener('click', () => adjustBet(-100));
+    document.getElementById('betPlus').addEventListener('click', () => adjustBet(100));
     document.getElementById('spinBtn').addEventListener('click', spinReels);
     document.getElementById('applyBtn').addEventListener('click', applyConfig);
 
@@ -826,6 +687,7 @@
       document.getElementById('rtp').value = (100 - parseFloat(e.target.value)).toFixed(1);
     });
 
+    initWinPool();
     initReels();
   </script>
 </body>
