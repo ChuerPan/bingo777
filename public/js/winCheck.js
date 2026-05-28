@@ -2,7 +2,56 @@
 import { SYMBOL_CONFIG, GAME_CONSTANTS } from './config.js';
 import { gameState } from './gameState.js';
 
-// 分析矩阵 - 找出所有匹配的符号组合
+// 8 方向偏移量
+const DIRECTIONS = [
+  [-1, -1], [-1, 0], [-1, 1],
+  [0, -1],          [0, 1],
+  [1, -1],  [1, 0], [1, 1]
+];
+
+// 使用 BFS 找出连通分量
+function findConnectedComponent(matrix, startCol, startRow, visited, baseSymbol) {
+  const queue = [[startCol, startRow]];
+  const component = [];
+  let groupJokerCount = 0;
+  
+  while (queue.length > 0) {
+    const [col, row] = queue.shift();
+    
+    // 检查边界
+    if (col < 0 || col >= GAME_CONSTANTS.REEL_COUNT || 
+        row < 0 || row >= GAME_CONSTANTS.VISIBLE_ROWS) {
+      continue;
+    }
+    
+    // 检查是否已访问
+    const key = `${col},${row}`;
+    if (visited.has(key)) {
+      continue;
+    }
+    
+    const symbol = matrix[col][row];
+    const isMatch = symbol === baseSymbol || SYMBOL_CONFIG[symbol].isJoker;
+    
+    if (isMatch) {
+      visited.add(key);
+      component.push({ col, row, symbol });
+      
+      if (SYMBOL_CONFIG[symbol].isJoker) {
+        groupJokerCount++;
+      }
+      
+      // 探索 8 个方向
+      for (const [dRow, dCol] of DIRECTIONS) {
+        queue.push([col + dCol, row + dRow]);
+      }
+    }
+  }
+  
+  return { component, groupJokerCount };
+}
+
+// 分析矩阵 - 找出所有 8 方向连通的符号组合
 export function analyzeWinningMatrix(matrix) {
   let totalWin = 0;
   let winDetails = [];
@@ -11,6 +60,7 @@ export function analyzeWinningMatrix(matrix) {
   const allJokerCells = [];
   let crownCount = 0;
   let jokerCount = 0;
+  const visited = new Set();
 
   // 统计皇冠和小丑的位置
   for (let row = 0; row < GAME_CONSTANTS.VISIBLE_ROWS; row++) {
@@ -26,50 +76,55 @@ export function analyzeWinningMatrix(matrix) {
     }
   }
 
-  // 按排计算连续相同图案
+  // 寻找所有连通分量
   for (let row = 0; row < GAME_CONSTANTS.VISIBLE_ROWS; row++) {
-    let col = 0;
-    while (col < GAME_CONSTANTS.REEL_COUNT) {
+    for (let col = 0; col < GAME_CONSTANTS.REEL_COUNT; col++) {
+      const key = `${col},${row}`;
+      if (visited.has(key)) {
+        continue;
+      }
+      
       let baseSymbol = matrix[col][row];
-      let consecutiveCount = 1;
-      let groupJokerCount = 0;
       
-      // 如果第一个是小丑，需要找最近的非小丑作为基础图案
+      // 如果当前是小丑，先确定基础符号
       if (SYMBOL_CONFIG[baseSymbol].isJoker) {
-        groupJokerCount++;
-        // 找后面的非小丑图案
-        for (let searchCol = col + 1; searchCol < GAME_CONSTANTS.REEL_COUNT; searchCol++) {
-          if (!SYMBOL_CONFIG[matrix[searchCol][row]].isJoker) {
-            baseSymbol = matrix[searchCol][row];
-            break;
+        // 查找周围是否有非小丑符号
+        let found = false;
+        for (const [dRow, dCol] of DIRECTIONS) {
+          const nCol = col + dCol;
+          const nRow = row + dRow;
+          if (nCol >= 0 && nCol < GAME_CONSTANTS.REEL_COUNT && 
+              nRow >= 0 && nRow < GAME_CONSTANTS.VISIBLE_ROWS) {
+            const neighbor = matrix[nCol][nRow];
+            if (!SYMBOL_CONFIG[neighbor].isJoker) {
+              baseSymbol = neighbor;
+              found = true;
+              break;
+            }
           }
+        }
+        // 如果周围全是小丑，就用小丑作为基础符号
+        if (!found) {
+          baseSymbol = '🃏';
         }
       }
       
-      // 统计连续匹配的数量（包括小丑）
-      let nextCol = col + 1;
-      while (nextCol < GAME_CONSTANTS.REEL_COUNT) {
-        const nextSymbol = matrix[nextCol][row];
-        if (nextSymbol === baseSymbol || SYMBOL_CONFIG[nextSymbol].isJoker) {
-          consecutiveCount++;
-          if (SYMBOL_CONFIG[nextSymbol].isJoker) {
-            groupJokerCount++;
-          }
-        } else {
-          break;
-        }
-        nextCol++;
-      }
+      // 找连通分量
+      const { component, groupJokerCount } = findConnectedComponent(
+        matrix, col, row, visited, baseSymbol
+      );
       
-      // 只有连续3个及以上才有奖励
-      if (consecutiveCount >= 3) {
+      const connectedCount = component.length;
+      
+      // 只有连通 3 个及以上才有奖励
+      if (connectedCount >= 3) {
         const cfg = SYMBOL_CONFIG[baseSymbol];
         let multiplier = 0;
         
-        if (consecutiveCount >= 6) multiplier = cfg.consecutive6;
-        else if (consecutiveCount >= 5) multiplier = cfg.consecutive5;
-        else if (consecutiveCount >= 4) multiplier = cfg.consecutive4;
-        else if (consecutiveCount >= 3) multiplier = cfg.consecutive3;
+        if (connectedCount >= 6) multiplier = cfg.consecutive6;
+        else if (connectedCount >= 5) multiplier = cfg.consecutive5;
+        else if (connectedCount >= 4) multiplier = cfg.consecutive4;
+        else if (connectedCount >= 3) multiplier = cfg.consecutive3;
         
         // 每个连接的小丑都让奖励翻倍
         const jokerMultiplier = Math.pow(2, groupJokerCount);
@@ -77,26 +132,21 @@ export function analyzeWinningMatrix(matrix) {
         
         const winAmount = multiplier * gameState.currentBet;
         
-        // 记录获胜组
-        const groupCells = [];
-        for (let i = 0; i < consecutiveCount; i++) {
-          groupCells.push({ row, col: col + i });
-        }
+        // 转换格式
+        const groupCells = component.map(c => ({ col: c.col, row: c.row }));
         
         winningGroups.push({
           symbol: baseSymbol,
-          consecutiveCount,
+          consecutiveCount: connectedCount,
           groupJokerCount,
           multiplier,
           winAmount,
           cells: groupCells
         });
         
-        winDetails.push(`第${row + 1}排 ${baseSymbol}×${consecutiveCount}${groupJokerCount > 0 ? '+🃏×' + groupJokerCount : ''}: ${winAmount}`);
+        winDetails.push(`8方向连通 ${baseSymbol}×${connectedCount}${groupJokerCount > 0 ? '+🃏×' + groupJokerCount : ''}: ${winAmount}`);
         totalWin += winAmount;
       }
-      
-      col += consecutiveCount;
     }
   }
 

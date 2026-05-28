@@ -136,24 +136,36 @@ h1 {
 
 .floating-text {
   position: absolute;
-  font-size: 1.5rem;
-  font-weight: bold;
+  font-size: 1.8rem;
+  font-weight: 900;
   color: #00ff88;
-  text-shadow: 0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 30px #00ff88;
+  text-shadow: 
+    0 0 5px #000,
+    0 0 10px #00ff88, 
+    0 0 20px #00ff88, 
+    0 0 30px #00ff88;
   animation: floatUp 1.5s ease-out forwards;
   pointer-events: none;
-  z-index: 100;
+  z-index: 200;
   white-space: nowrap;
 }
 
 .floating-text.joker {
   color: #ff00ff;
-  text-shadow: 0 0 10px #ff00ff;
+  text-shadow: 
+    0 0 5px #000,
+    0 0 10px #ff00ff, 
+    0 0 20px #ff00ff, 
+    0 0 30px #ff00ff;
 }
 
 .floating-text.crown {
   color: #ffd700;
-  text-shadow: 0 0 10px #ffd700;
+  text-shadow: 
+    0 0 5px #000,
+    0 0 10px #ffd700, 
+    0 0 20px #ffd700, 
+    0 0 30px #ffd700;
 }
 
 @keyframes floatUp {

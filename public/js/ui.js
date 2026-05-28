@@ -15,8 +15,7 @@ export function initSymbolRewards() {
         <div class="symbol-name">${cfg.name}${isJoker ? ' (万能)' : ''}${isCrown ? ' (特效)' : ''}</div>
         <div style="font-size: 0.8rem; color: #aaa;">
           连3: ${cfg.consecutive3}x | 连4: ${cfg.consecutive4}x<br>
-          连5: ${cfg.consecutive5}x | 连6: ${cfg.consecutive6}x
-        </div>
+          连5: ${cfg.consecutive5}x | 连6: ${cfg.consecutive6}x</div>
       </div>
     `;
   }).join('');
@@ -45,12 +44,13 @@ export function showResult(totalWin, winDetails) {
   }
 }
 
-// 显示浮动文本（奖励提示）
+// 显示浮动文本（奖励提示）- 修复版
 export function showFloatingText(text, x, y, extraClass = '') {
   const container = document.getElementById('reelsContainer');
   const floatText = document.createElement('div');
   floatText.className = 'floating-text ' + extraClass;
   floatText.textContent = text;
+  // 直接设置绝对位置，确保动画正确
   floatText.style.left = `${x}px`;
   floatText.style.top = `${y}px`;
   container.appendChild(floatText);
@@ -60,88 +60,37 @@ export function showFloatingText(text, x, y, extraClass = '') {
   }, 1500);
 }
 
-// 高亮中奖符号并显示奖励
+// 高亮中奖符号并显示奖励 - 简化版奖励计算
 export function highlightWinningSymbols(winningGroups, allCrownCells, crownCount, crownMultiplier) {
-  let currentRow = -1;
   let allCells = [];
   
-  // 按行整理所有单元格
+  // 整理所有单元格并计算每个符号的奖励
   for (const group of winningGroups) {
-    const groupCells = group.cells;
-    let consecutiveMultiplier = 1;
-    
-    for (let i = 0; i < groupCells.length; i++) {
-      const cell = groupCells[i];
-      const positionInGroup = i;
-      
-      // 连续的话倍数递增
-      if (positionInGroup > 0) {
-        consecutiveMultiplier *= 2;
-      }
-      
-      // 计算这个图案的奖励
-      const baseReward = SYMBOL_CONFIG[group.symbol].consecutive3 / 3; // 基础份额
-      const cellWin = Math.round(baseReward * consecutiveMultiplier * gameState.currentBet);
-      
+    const totalWinPerCell = Math.round(group.winAmount / group.cells.length);
+    for (let i = 0; i < group.cells.length; i++) {
+      const cell = group.cells[i];
       allCells.push({
         ...cell,
         symbol: group.symbol,
-        cellWin: cellWin,
-        groupIndex: winningGroups.indexOf(group),
-        isFirstInGroup: cell.col === groupCells[0].col,
-        isLastInGroup: cell.col === groupCells[groupCells.length - 1].col,
-        consecutiveCount: group.consecutiveCount,
-        groupJokerCount: group.groupJokerCount,
-        positionInGroup: positionInGroup
+        cellWin: totalWinPerCell,
+        groupIndex: winningGroups.indexOf(group)
       });
     }
   }
   
-  // 按行和列排序
+  // 按行和列排序，让显示更有序
   allCells.sort((a, b) => {
     if (a.row !== b.row) return a.row - b.row;
     return a.col - b.col;
   });
   
   let cellIndex = 0;
+  let currentRow = -1;
   
   return new Promise((resolve) => {
     function highlightNext() {
-      if (cellIndex < allCells.length) {
-        const cell = allCells[cellIndex];
-        
-        // 换行时增加延时
-        const isNewRow = cell.row !== currentRow;
-        const delay = isNewRow && cellIndex > 0 ? 600 : 250;
-        currentRow = cell.row;
-        
-        setTimeout(() => {
-          const reel = document.getElementById(`reel${cell.col}`);
-          const symbols = reel.querySelectorAll('.symbol');
-          const targetSymbol = symbols[symbols.length - GAME_CONSTANTS.VISIBLE_ROWS + cell.row];
-          targetSymbol.classList.add('highlight');
-          
-          const reelRect = reel.getBoundingClientRect();
-          const containerRect = document.getElementById('reelsContainer').getBoundingClientRect();
-          const x = reelRect.left - containerRect.left + reelRect.width / 2;
-          const y = reelRect.top - containerRect.top + cell.row * 80;
-          
-          // 显示该图案贡献的奖励
-          let floatText = `+${cell.cellWin}`;
-          let floatClass = '';
-          
-          showFloatingText(floatText, x, y, floatClass);
-          
-          // 一段时间后恢复非高亮状态
-          setTimeout(() => {
-            targetSymbol.classList.remove('highlight');
-          }, 1500);
-          
-          cellIndex++;
-          highlightNext();
-        }, delay);
-      } else {
-        // 高亮所有皇冠
+      if (cellIndex >= allCells.length) {
+        // 所有符号高亮完成，现在处理皇冠
         let crownIndex = 0;
         function highlightNextCrown() {
           if (crownIndex < allCrownCells.length) {
@@ -149,32 +98,34 @@ export function highlightWinningSymbols(winningGroups, allCrownCells, crownCount
             setTimeout(() => {
               const reel = document.getElementById(`reel${cell.col}`);
               const symbols = reel.querySelectorAll('.symbol');
-              const targetSymbol = symbols[symbols.length - GAME_CONSTANTS.VISIBLE_ROWS + cell.row];
-              targetSymbol.classList.add('highlight');
+              const targetIndex = symbols.length - GAME_CONSTANTS.VISIBLE_ROWS + cell.row;
+              const targetSymbol = symbols[targetIndex];
               
-              const reelRect = reel.getBoundingClientRect();
-              const containerRect = document.getElementById('reelsContainer').getBoundingClientRect();
-              const x = reelRect.left - containerRect.left + reelRect.width / 2;
-              const y = reelRect.top - containerRect.top + cell.row * 80;
-              
-              showFloatingText('👑', x, y, 'crown');
-              
-              setTimeout(() => {
-                targetSymbol.classList.remove('highlight');
-              }, 1500);
+              if (targetSymbol) {
+                targetSymbol.classList.add('highlight');
+                
+                const containerRect = document.getElementById('reelsContainer').getBoundingClientRect();
+                const reelRect = reel.getBoundingClientRect();
+                const x = reelRect.left - containerRect.left + reelRect.width / 2;
+                const y = reelRect.top - containerRect.top + cell.row * 80;
+                
+                showFloatingText('👑', x, y, 'crown');
+                
+                setTimeout(() => {
+                  targetSymbol.classList.remove('highlight');
+                }, 1500);
+              }
               
               crownIndex++;
               highlightNextCrown();
             }, 200);
           } else if (crownMultiplier > 1) {
-            // 显示皇冠加成
             setTimeout(() => {
               const container = document.getElementById('reelsContainer');
               const x = container.offsetWidth / 2;
               const y = container.offsetHeight / 2;
               showFloatingText(`皇冠 ×${crownMultiplier}`, x, y, 'crown');
             }, 300);
-            
             setTimeout(resolve, 4000);
           } else {
             setTimeout(resolve, 3000);
@@ -182,7 +133,43 @@ export function highlightWinningSymbols(winningGroups, allCrownCells, crownCount
         }
         
         highlightNextCrown();
+        return;
       }
+      
+      const cell = allCells[cellIndex];
+      const isNewRow = cell.row !== currentRow;
+      const delay = isNewRow && cellIndex > 0 ? 600 : 250;
+      currentRow = cell.row;
+      
+      setTimeout(() => {
+        const reel = document.getElementById(`reel${cell.col}`);
+        const symbols = reel.querySelectorAll('.symbol');
+        const targetIndex = symbols.length - GAME_CONSTANTS.VISIBLE_ROWS + cell.row;
+        const targetSymbol = symbols[targetIndex];
+        
+        if (targetSymbol) {
+          targetSymbol.classList.add('highlight');
+          
+          // 计算位置 - 确保正确获取到 reel 和 container
+          const container = document.getElementById('reelsContainer');
+          const containerRect = container.getBoundingClientRect();
+          const reelRect = reel.getBoundingClientRect();
+          
+          const x = reelRect.left - containerRect.left + reelRect.width / 2;
+          const y = reelRect.top - containerRect.top + cell.row * 80;
+          
+          // 显示该图案贡献的奖励
+          showFloatingText(`+${cell.cellWin}`, x, y, '');
+          
+          // 一段时间后恢复非高亮状态
+          setTimeout(() => {
+            targetSymbol.classList.remove('highlight');
+          }, 1500);
+        }
+        
+        cellIndex++;
+        highlightNext();
+      }, delay);
     }
     
     highlightNext();
